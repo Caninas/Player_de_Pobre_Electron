@@ -85,12 +85,13 @@ class Player {
 
   listar_playlists() {
     this.selecionar_pasta().then(pasta_playlists => {
+      lista_playlists.innerHTML = ""
       this.pasta_playlists = pasta_playlists[0]
-      this.playlists = fs.readdirSync(this.pasta_playlists)
+      this.playlists = fs.readdirSync(this.pasta_playlists) // botar para ler apenas diretorios
 
       for (let i in this.playlists) {
         let item = document.createElement("li")
-        item.setAttribute("class", "list-group-item bg-black text-white")
+        item.setAttribute("class", "list-group-item bg-black text-white")   // !lista scrolavel e adaptavel
         item.setAttribute("onclick", "selecionar_playlist(this)")
         item.innerHTML = this.playlists[i]
         lista_playlists.appendChild(item)
