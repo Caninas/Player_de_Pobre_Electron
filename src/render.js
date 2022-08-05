@@ -5,55 +5,12 @@ const jsmediatags = require('jsmediatags');
 const { ipcRenderer } = require('electron');
 
 
-
 nome_musica = document.getElementById("nome_musica")
 artista = document.getElementById("artista")
 cover_album = document.getElementById("cover_album")
 lista_playlists = document.getElementById("lista_playlists")
 lista_musicas = document.getElementById("lista_musicas")
 
-
-class Musica {
-  constructor(caminho) {
-    this.caminho = caminho
-    this.musica = new howler.Howl({
-      src: [this.caminho],
-      html5: true,
-      preload: true,
-      onload: function () {
-        var duraçao = this.duration
-      },
-    })  //requestAnimationFrame atualizar slider
-
-    jsmediatags.read(this.caminho, {
-      onSuccess: function (tag) {
-        this.nome = tag.tags.title
-        this.artista = tag.tags.artist
-        this.album = tag.tags.album
-
-        const { data, format } = tag.tags.picture;
-        let stringB64 = Buffer.from(data)           // conversao do array do array de dados da imagem e 
-        this.cover = `data:${format};base64,${stringB64.toString('base64')}`; // converter para string
-      },
-
-      onError: function (error) {
-        console.log("error: " + error.type, error.info) //return error, passar para proxima?
-      }
-    })
-  }
-
-  setar_duraçao() {
-    console.log(this.duraçao)
-  }
-
-  tocar() {
-    this.id = this.musica.play()
-  }
-
-  unload() {
-    this.musica.unload()
-  }
-}
 
 //var musica = new Musica("C:/Users/rasen/Desktop/musicas/Tranquilão/Baby Blue - Remastered 2010.mp3")
 //musica.tocar()
