@@ -29,19 +29,12 @@ body {
   height: 25vh;
 }
 
-.playlists, .cover{
+#div_playlists, .cover{
   width: 15%;
 }
 
-.musicas, .botoes{
+#div_musicas, .botoes{
   width: 85%;
-}
-
-.playlists {
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  /* justify-content: center; */
 }
 
 .btn {
@@ -59,7 +52,6 @@ body {
 }
 
 .botoes-play {
-  fill: white;
   margin: 0.5vw;
   height: 40px;
   width: 40px;
@@ -71,12 +63,88 @@ body {
   width: 25px;
 }
 
+.playlist {
+  color: rgb(147, 139, 255);
+
+}
+
+.nome_musicas, .artista {
+  list-style-type: none;
+  padding: 0 0 0 0;
+}
+
+.musica {
+  display: grid;
+  grid-template-columns: 80px 300px;
+  padding: 0 0 10px 0;
+}
+
+article > p {
+  margin: 0 0 0 15px;
+}
+
+.artista {
+  left: 50%;
+}
+
+.img {
+  height: 100%;
+  width: 100%;
+}
+::-webkit-scrollbar-corner {
+  background: #8b8b8b00;
+}
+
+::-webkit-scrollbar-track {
+  box-shadow: 0 0 5px grey;
+  box-shadow: inset 0 0 5px grey;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: blue; 
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar{
+  background: #8b8b8b00;
+  width: 5px;
+}
+
+#div_playlists {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+
+#div_musicas {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+
+#lista_playlists{
+  margin: 0 0 6px 0;
+  padding: 0 0 0 10px;
+  list-style-type: none;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  width: 100%;
+}
+
+#lista_musicas {
+  padding: 10px 0px 10px 10px;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  width: 100%;
+}
+
 #div-loop {
   display: flex;
   align-items: center;
   margin: 0 1.3vw 0 1.3vw;
   border-radius: 50%;
-  background-color: gray;
+;
 }
 
 #div-random {
@@ -84,7 +152,6 @@ body {
   align-items: center;
   margin: 0 1.3vw 0 1.3vw;
   border-radius: 50%;
-  background-color: gray;
 }
 
 #prox{

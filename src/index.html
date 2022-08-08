@@ -11,42 +11,43 @@
   <body>
     <div class="grid_principal">
       <div class="linha_cima">
-        <div class="playlists" style="background-color: black;">
+        <div id="div_playlists" style="background-color: black;">
           <div class="d-grid col-11">
             <button type="button" class="btn btn-primary" onclick="player.listar_playlists()">Selecionar Pastas</button>
           </div>
-            <ul class="list-group list-group-flush" id="lista_playlists">
+            <ul class="" id="lista_playlists">
 
             </ul>
         </div>
 
-        <div class="musicas" style="background-color: crimson;">
-          <ul id="lista_musicas">
+        <div id="div_musicas" style="background-color: crimson;">
+          <section id="lista_musicas">
 
-          </ul>
+          </section>
         </div>
       </div>
 
       <div class="linha_baixo">
-        <div class="cover" style="background-color: gold; display: flex; justify-content: center;" >
+        <div class="cover" style="background-color: gold; display: flex; justify-content: center;">
           <img src="icons/padrao.png" id="cover_album">
         </div>
 
         <div class="botoes" style="background-color: rgb(147, 139, 255);">
           <div>
             <h4 class="text-center text-white" id="nome_musica">MUSICA</h5>
-            <p class="text-center text-white" id="artista">ARTISTA</p>
+            <p class="text-center text-white" id="artista"></p>
           </div>
           <div id="div-botoes">
             <div id="div-random">
-              <input class="botoes-rl" id="random" type="image" src="icons/random.svg" alt="" onclick="player.random(this)">
+              <input class="botoes-rl" id="random" type="image" src="icons/random.svg" alt="" onclick="player.random()">
             </div>
              
-            <input id="ant" type="image" src="" alt="" onclick="player.anterior()"><img class="botoes-play" src="icons/anterior.svg" alt="">
+            <input class="botoes-play" id="ant" type="image" src="icons/anterior.svg" alt="" onclick="player.anterior()">
             <input class="botoes-play" id="play" type="image" src="icons/play.svg" alt="" onclick="player.tocar()">
             <input class="botoes-play" id="prox" type="image" src="icons/anterior.svg" alt="" onclick="player.proximo()">
+
             <div id="div-loop">
-              <input class="botoes-rl" id="loop" type="image" src="icons/loop.png" alt="" onclick="player.loop(this)">
+              <input class="botoes-rl" id="loop" type="image" src="icons/loop.png" alt="" onclick="player.loop()">
             </div>
           </div>
         </div>
