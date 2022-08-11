@@ -35,11 +35,11 @@ _loop = 0
 
 function seek(objeto) {
   console.log(objeto.srcElement.value)
-  audio.currentTime = (objeto.srcElement.value/100)*audio.duration
+  audio.currentTime = (objeto.srcElement.value / 100) * audio.duration
 
 }
 function update_slider(objeto) {
-  const {duration, currentTime} = objeto.srcElement
+  const { duration, currentTime } = objeto.srcElement
   slider.value = `${(currentTime / duration) * 100}`
 }
 
@@ -123,86 +123,92 @@ function selecionar_playlist(botao) {
   } else {
     botao.setAttribute('class', 'list-group-item bg-black text-white')
   }
+  if (pasta_selecionada != botao.innerHTML) {
+    lista_musicas.innerHTML = ""
 
-  pasta_selecionada = botao.innerHTML
+    pasta_selecionada = botao.innerHTML
 
-  let dire = fs.readdirSync(path.join(pasta_playlists, pasta_selecionada), { withFileTypes: true }) //apenas musicas
-  console.log(path.extname(dire[0].name).toUpperCase())
-  diretorio = dire
-    .filter(arquivo => arquivo.isFile() && [".MP3", ".AAC", ".FLAC", ".OGG", ".OGA", ".DOLBY", ".WAV", ".CAF", ".OPUS", ".WEBA"].includes(path.extname(arquivo.name).toUpperCase()))
-    .map(arquivo => path.join(arquivo.name))
+    let dire = fs.readdirSync(path.join(pasta_playlists, pasta_selecionada), { withFileTypes: true }) //apenas musicas
+    console.log(path.extname(dire[0].name).toUpperCase())
+    diretorio = dire
+      .filter(arquivo => arquivo.isFile() && [".MP3", ".AAC", ".FLAC", ".OGG", ".OGA", ".DOLBY", ".WAV", ".CAF", ".OPUS", ".WEBA"].includes(path.extname(arquivo.name).toUpperCase()))
+      .map(arquivo => path.join(arquivo.name))
 
-  lista_musicas.innerHTML = ""
 
-  let caminho = path.join(pasta_playlists, pasta_selecionada)
+    let caminho = path.join(pasta_playlists, pasta_selecionada)
 
-  async function a(diretorio) {
-    cancelado = false
-    for (let i in diretorio) {
-      console.log(i)
-      await new Promise((resolve, reject) => jsmediatags.read(path.join(caminho, diretorio[i]), {   // nao usar listas, colocar article? div? flex
-        onSuccess: function (tag) {                                 // imagem - nome/artista - etc como sections?
-          let linha = document.createElement("article")                        //nao esta organizado direto
-          linha.setAttribute("class", "musica")
-          linha.setAttribute("id", i)
-          linha.addEventListener("dblclick", tocar_especifica_clique)
-          //linha.setAttribute("ondblclick", "tocar_especifica(id)")
+    async function a(diretorio) {
+      cancelado = false
+      for (let i in diretorio) {
+        console.log(i)
+        await new Promise((resolve, reject) => jsmediatags.read(path.join(caminho, diretorio[i]), {   // nao usar listas, colocar article? div? flex
+          onSuccess: function (tag) {                                 // imagem - nome/artista - etc como sections?
+            if (document.getElementById(i) == null) {
+              let linha = document.createElement("article")                        //nao esta organizado direto
+              linha.setAttribute("class", "musica")
+              linha.setAttribute("id", i)
+              linha.addEventListener("dblclick", tocar_especifica_clique)
+              //linha.setAttribute("ondblclick", "tocar_especifica(id)")
 
-          let img = document.createElement("img")
-          img.setAttribute("class", "img")
+              let img = document.createElement("img")
+              img.setAttribute("class", "img")
 
-          try {
-            const { data, format } = tag.tags.picture;
-            let stringB64 = Buffer.from(data)           // conversao do array do array de dados da imagem e 
-            img.src = `data:${format};base64,${stringB64.toString('base64')}`; // converter para string
-          } catch (error) {
+              try {
+                const { data, format } = tag.tags.picture;
+                let stringB64 = Buffer.from(data)           // conversao do array do array de dados da imagem e 
+                img.src = `data:${format};base64,${stringB64.toString('base64')}`; // converter para string
+              } catch (error) {
+                img.src = 'icons/padrao.png'
+              }
+
+              linha.appendChild(img)
+
+              let nome_musica = document.createElement("p")
+              nome_musica.setAttribute("class", "nome_musicas")
+              nome_musica.innerHTML = tag.tags.title
+
+              let artista = document.createElement("p")
+              artista.setAttribute("class", "artista")
+              artista.innerHTML = tag.tags.artist
+              nome_musica.appendChild(artista)
+              linha.appendChild(nome_musica)
+
+              lista_musicas.appendChild(linha)
+
+              resolve()
+            } else {
+              return
+            }
+          },
+          onError: function (error, tag) {
+            let linha = document.createElement("article")                        //nao esta organizado direto
+            linha.setAttribute("class", "musica")
+            linha.setAttribute("id", i)
+            linha.addEventListener("dblclick", tocar_especifica_clique)
+
+            let img = document.createElement("img")
+            img.setAttribute("class", "img")
+
             img.src = 'icons/padrao.png'
+
+            linha.appendChild(img)
+
+            // escopo diretorio n funciona aqui
+            let nome_musica = document.createElement("p")
+            nome_musica.setAttribute("class", "nome_musicas")
+            nome_musica.innerHTML = diretorio[i].split(".").slice(0, -1).join(".")//path_diretorio.split("\\").slice(-1)[0].split(".").slice(0, -1).join(".") //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+            linha.appendChild(nome_musica)
+            lista_musicas.appendChild(linha)
+
+            console.log("error: " + error.type, error.info)
+            resolve()
           }
-
-          linha.appendChild(img)
-
-          let nome_musica = document.createElement("p")
-          nome_musica.setAttribute("class", "nome_musicas")
-          nome_musica.innerHTML = tag.tags.title
-
-          let artista = document.createElement("p")
-          artista.setAttribute("class", "artista")
-          artista.innerHTML = tag.tags.artist
-          nome_musica.appendChild(artista)
-          linha.appendChild(nome_musica)
-
-          lista_musicas.appendChild(linha)
-
-          resolve()
-        },
-        onError: function (error, tag) {
-          let linha = document.createElement("article")                        //nao esta organizado direto
-          linha.setAttribute("class", "musica")
-          linha.setAttribute("id", i)
-          linha.addEventListener("dblclick", tocar_especifica_clique)
-
-          let img = document.createElement("img")
-          img.setAttribute("class", "img")
-
-          img.src = 'icons/padrao.png'
-
-          linha.appendChild(img)
-
-          // escopo diretorio n funciona aqui
-          let nome_musica = document.createElement("p")
-          nome_musica.setAttribute("class", "nome_musicas")
-          nome_musica.innerHTML = diretorio[i].split(".").slice(0, -1).join(".")//path_diretorio.split("\\").slice(-1)[0].split(".").slice(0, -1).join(".") //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-          linha.appendChild(nome_musica)
-          lista_musicas.appendChild(linha)
-
-          console.log("error: " + error.type, error.info)
-          resolve()
-        }
-      }))
+        }))
+      }
     }
+    a(diretorio)
   }
-  a(diretorio)
 }
 
 async function background() {
@@ -224,7 +230,7 @@ function carregar_musica(indice = indice_loaded) {
 
 function tocar_especifica(indice = indice_loaded) {
   console.log(indice)
-  console.log(typeof(indice))
+  console.log(typeof (indice))
 
   carregar_musica(indice)
 
