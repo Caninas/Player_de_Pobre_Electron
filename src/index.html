@@ -13,7 +13,7 @@
       <div class="linha_cima">
         <div id="div_playlists" style="background-color: black;">
           <div class="d-grid col-11">
-            <button type="button" class="btn btn-primary" onclick="player.listar_playlists()">Selecionar Pastas</button>
+            <button type="button" class="btn btn-primary" onclick="listar_playlists()">Selecionar Pastas</button>
           </div>
             <ul class="" id="lista_playlists">
 
@@ -32,6 +32,8 @@
           <img src="icons/padrao.png" id="cover_album">
         </div>
 
+        <audio src="" id="audio"></audio>
+
         <div class="botoes" style="background-color: rgb(147, 139, 255);">
           <div>
             <h4 class="text-center text-white" id="nome_musica">MUSICA</h5>
@@ -39,16 +41,19 @@
           </div>
           <div id="div-botoes">
             <div id="div-random">
-              <input class="botoes-rl" id="random" type="image" src="icons/random.svg" alt="" onclick="player.random()">
+              <input class="botoes-rl" id="random" type="image" src="icons/random.svg" alt="" onclick="random()">
             </div>
              
-            <input class="botoes-play" id="ant" type="image" src="icons/anterior.svg" alt="" onclick="player.anterior()">
-            <input class="botoes-play" id="play" type="image" src="icons/play.svg" alt="" onclick="player.tocar()">
-            <input class="botoes-play" id="prox" type="image" src="icons/anterior.svg" alt="" onclick="player.proximo()">
+            <input class="botoes-play" id="ant" type="image" src="icons/anterior.svg" alt="" onclick="anterior()">
+            <input class="botoes-play" id="play" type="image" src="icons/play.svg" alt="" onclick="tocar()">
+            <input class="botoes-play" id="prox" type="image" src="icons/anterior.svg" alt="" onclick="proximo()">
 
             <div id="div-loop">
-              <input class="botoes-rl" id="loop" type="image" src="icons/loop.png" alt="" onclick="player.loop()">
+              <input class="botoes-rl" id="loop" type="image" src="icons/loop.png" alt="" onclick="loop()">
             </div>
+          </div>
+          <div id="div-slider">
+            <input type="range" name="" id="slider_musica" max="100" value="0">
           </div>
         </div>
       </div>

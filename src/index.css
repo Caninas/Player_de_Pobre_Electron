@@ -106,9 +106,21 @@ article > p {
   border-radius: 10px;
 }
 
-::-webkit-scrollbar{
+::-webkit-scrollbar {
   background: #8b8b8b00;
   width: 5px;
+}
+
+#slider_musica {
+  width: 50%;
+}
+
+#div-slider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 10px;
+  width: 100%;
 }
 
 #div_playlists {
