@@ -3,7 +3,6 @@ body {
     Arial, sans-serif;
   padding: 0;
   margin: 0;
-
 }
 
 .grid_principal {
@@ -23,21 +22,29 @@ body {
 }
 
 .linha_cima {
-  height: 75vh;
+  height: calc(100% - 192px);
 }
 
 .linha_baixo {
-  height: 25vh;
+  position: absolute;
+  top: calc(100% - 192px);
+  height: 192px;
+  box-shadow: 0px 6px 50px 20px rgb(0 0 0 / 40%);
 }
 
 #div_playlists,
 .cover {
-  width: 15%;
+  width: 10%;
+}
+
+.cover {
+  display: flex;
+  justify-content: center;
 }
 
 #div_musicas,
 .botoes {
-  width: 85%;
+  width: 90%;
 }
 
 .btn {
@@ -47,11 +54,10 @@ body {
 }
 
 .botoes {
-  box-shadow: 0px 0px 40px 35px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  /* box-shadow: 0px -40px 40px -40px rgb(0 0 0 / 50%); */
+  display: grid;
+  grid-template-columns: calc(100% - 10vw) 10vw;
+  background-image: linear-gradient(#1c0d49, #231661);
 }
 
 .botoes-play {
@@ -67,28 +73,61 @@ body {
 }
 
 .playlist {
-  color: rgb(147, 139, 255);
-
+  color: rgb(140 105 255);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  font-weight: 600;
+  margin: 0 0 5px 0;
+  padding: 0 0 0 5px;
+  border-radius: 3px;
 }
 
-.nome_musicas,
-.artista {
-  list-style-type: none;
-  padding: 0 0 0 0;
+.texto_active {
+  color: white;
 }
 
-.musica {
+.musica_active {
+  background-color: rgb(2, 0, 29);
+}
+
+.disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+section > article {
   display: grid;
-  grid-template-columns: 80px 300px;
-  padding: 0 0 10px 0;
+  grid-template-columns: 50px 50% calc(calc(100% - calc(50px + 50%)) / 2) calc(calc(100% - calc(50px + 50%)) / 2);
+  padding: 7px 0 7px 7px;
+  margin: 0 7px 0 0;
+  border-radius: 7px;
 }
 
-article > p {
+
+
+.texto_padrao {
+  color: #e2e1ff;
+  margin: 0 0 0 0;
+  align-self: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  font-weight: 600;
+  font-size: 90%;
+}
+
+.nome_musicas{
   margin: 0 0 0 15px;
+  font-weight: bold;
+  font-size: 100%;
+}
+
+.extensao {
+  justify-self: center;
 }
 
 .artista {
-  left: 50%;
+  margin: 0 0 0 0;
 }
 
 .img {
@@ -96,28 +135,85 @@ article > p {
   width: 100%;
 }
 
+.c-titulo {
+  font-size: 110%;
+  margin-left: 15px;
+}
+
+.c-album {
+  font-size: 110%;
+}
+
+.c-ext {
+  font-size: 110%;
+  justify-self: center;
+}
+
+.slider {
+  appearance: none;
+  background: #0c0a1d;
+  background-image: linear-gradient(#b5adff, #845cff);
+  background-repeat: no-repeat;
+}
+
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%; 
+  background: #ffffff; 
+}
+
 ::-webkit-scrollbar-corner {
   background: #8b8b8b00;
 }
 
 ::-webkit-scrollbar-track {
-  box-shadow: 0 0 5px grey;
-  box-shadow: inset 0 0 5px grey;
-  border-radius: 10px;
+  box-shadow: 0 0 5px rgb(0, 0, 0);
+  border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: blue;
+  -webkit-appearance: none;
+  background: #e2e1ff;;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar {
-  background: #8b8b8b00;
+  background: #3f3b61;;
   width: 5px;
 }
 
+#cabeçalho_musicas {
+  box-shadow: 20px 4px 20px 7px rgb(0 0 0 / 40%);;
+  padding: 5px 10px 5px 5px;
+  width: 100%;
+} 
+
+#botoes-meio {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+#artista{
+  color: white;
+  font-size: 95%;
+  text-align: center;
+}
+
+#nome_musica {
+  color: white;
+  font-size: 150%;
+  text-align: center;
+  padding-bottom: 5px;
+}
 #slider_musica {
+  background-size: 0% 100%;
   width: 50%;
+  height: 12px;
+  border-radius: 5px;
 }
 
 #div-slider {
@@ -128,31 +224,54 @@ article > p {
   width: 100%;
 }
 
+#duraçao_slider {
+  position: absolute;
+  left: 70%;
+  margin: 0 0 3px 15px;
+}
+
+#slider_volume {
+  background-size: 50% 100%;
+  height: 12px;
+  width: 80%;
+  border-radius: 10px;
+  transform: rotate(270deg);
+}
+
+#div-volume {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 #div_playlists {
   display: flex;
   align-items: center;
   flex-direction: column;
+  background-image: linear-gradient(#1c0f47, #100238);
 }
 
 #div_musicas {
   display: flex;
+  background-color: #1c0f47;
+  /* background-image: linear-gradient(#17132a, #1c0f47); */
   align-items: center;
   flex-direction: column;
 }
 
 #lista_playlists {
   margin: 0 0 6px 0;
-  padding: 0 0 0 10px;
+  padding: 0 0 0 5px;
   list-style-type: none;
   overflow-x: hidden;
-  overflow-y: scroll;
+  overflow-y: auto;
   width: 100%;
 }
 
 #lista_musicas {
-  padding: 10px 0px 10px 10px;
+  padding: 10px 0px 30px 5px;
   overflow-x: hidden;
-  overflow-y: scroll;
+  overflow-y: auto;
   width: 100%;
 }
 
@@ -178,4 +297,5 @@ article > p {
 #div-botoes {
   display: flex;
   align-items: center;
+  margin: 5px 0 5px 0;
 }
