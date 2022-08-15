@@ -1,6 +1,6 @@
 {
-  "name": "player_de_pobre_electron",
-  "productName": "player_de_pobre_electron",
+  "name": "pobrefy",
+  "productName": "Player de Pobre",
   "version": "1.0.0",
   "description": "Player de musicas locais",
   "main": "src/index.js",
@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.0",
+    "electron-store": "^8.1.0",
     "howler": "^2.2.3",
     "jsmediatags": "^3.9.7",
     "yarn": "^1.22.19"
