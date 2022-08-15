@@ -1,7 +1,7 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const { ipcMain, dialog } = require('electron')
-
+const { getTamanhotela, setTamanhotela } = require("./settings")
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 // eslint-disable-next-line global-require
@@ -12,10 +12,11 @@ if (require('electron-squirrel-startup')) {
 }
 
 const createWindow = () => {
-  
+  const { fullscreen, tamanho } = getTamanhotela()
+
   const mainWindow = new BrowserWindow({
-    width: 1600,
-    height: 900,
+    width: tamanho[0],
+    height: tamanho[1],
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: true,
@@ -23,11 +24,17 @@ const createWindow = () => {
       enableRemoteModule: true,
     },
   });
-
+  
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
   
+  if (fullscreen){
+    mainWindow.maximize()
+  }
+  mainWindow.on("resized", () => setTamanhotela(false, mainWindow.getSize()))
+  mainWindow.on("maximize", () => setTamanhotela(true, mainWindow.getSize()))
   mainWindow.setMenuBarVisibility(false)
   mainWindow.webContents.openDevTools();
+  
 };
 
 // electron termina de inicializar => cria window
@@ -48,5 +55,5 @@ app.on('activate', () => {
 
 // quando invoke (render) é chamado o handle com o nome é executado na main
 ipcMain.handle("browse_pasta", () => {  
-  return dialog.showOpenDialogSync({ properties: ['openDirectory'] });
+  return dialog.showOpenDialogSync({ properties: ['openDirectory'] })
 });

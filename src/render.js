@@ -2,30 +2,29 @@ const fs = require('fs');
 const jsmediatags = require('jsmediatags');
 const { ipcRenderer } = require('electron');
 const path = require('path');
+const { getSessaoPassada, setSessaoPassada } = require("./settings")
 
-
-var artista = document.getElementById("artista")
-var nome_musica = document.getElementById("nome_musica")
 var cover_album = document.getElementById("cover_album")
+var nome_musica = document.getElementById("nome_musica")
+var artista = document.getElementById("artista")
+
 var lista_playlists = document.getElementById("lista_playlists")
 var lista_musicas = document.getElementById("lista_musicas")
-var audio = document.getElementById("audio")
+
 var slider_musica = document.getElementById("slider_musica")
 var slider_volume = document.getElementById("slider_volume")
 var duraçao_slider = document.getElementById("duraçao_slider")
-
-audio.addEventListener("ended", proximo)
-audio.volume = 0.5
-
-slider_volume.addEventListener("input", volume)
-slider_volume.value = 50
-slider_musica.addEventListener("input", seek)
-slider_musica.value = 0
 
 var botao_play = document.getElementById("play")
 var fundo_random = document.getElementById("div-random")
 var fundo_loop = document.getElementById("div-loop")
 
+var audio = document.getElementById("audio")
+audio.volume = 0.5
+slider_volume.value = 50
+slider_musica.value = 0
+
+// variaveis
 var diretorio = []
 var pasta_playlists = ""
 var pasta_selecionada = ""
@@ -38,10 +37,32 @@ var cursor = 0
 var aleatorio = 0
 var _loop = 0
 
+var cache = {}
+
+// article (musica selecionada), usado para tirar a borda apos mudar a musica
 var article
 var timer
 
-function volume(objeto) { 
+// eventos
+navigator.mediaSession.metadata = new MediaMetadata()
+navigator.mediaSession.setActionHandler('play', tocar)
+navigator.mediaSession.setActionHandler('pause', tocar)
+navigator.mediaSession.setActionHandler('stop', tocar)
+navigator.mediaSession.setActionHandler('previoustrack', anterior)
+navigator.mediaSession.setActionHandler('nexttrack', proximo)
+
+slider_volume.addEventListener("input", volume)
+slider_musica.addEventListener("input", seek)
+audio.addEventListener("ended", proximo)
+botao_play.addEventListener("click", tocar)
+document.getElementById("ant").addEventListener("click", anterior)
+document.getElementById("prox").addEventListener("click", proximo)
+document.getElementById("loop").addEventListener("click", loop)
+document.getElementById("random").addEventListener("click", random)
+
+carregar_sessao()
+
+function volume(objeto) {
    audio.volume = objeto.srcElement.value / 100
    slider_volume.style.backgroundSize = `${objeto.srcElement.value}% 100%`
 }
@@ -49,7 +70,6 @@ function volume(objeto) {
 function seek(objeto) {
    audio.currentTime = (objeto.srcElement.value / 100) * audio.duration
    update_slider()
-
 }
 
 function update_slider() {
@@ -84,32 +104,44 @@ function random() {
       aleatorio = 0
       fundo_random.style.backgroundColor = ""
    }
+   setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
+      indices_passados, cursor, aleatorio, cache)
 }
 
 function atualizar_tela_musica(indice = indice_loaded) { // pegar direto da tela
    var path_diretorio = path.join(pasta_playlists, pasta_selecionada, diretorio[indice])
+
    jsmediatags.read(path_diretorio, {
       onSuccess: function (tag) {
+         navigator.mediaSession.metadata.title = tag.tags.title
          nome_musica.innerHTML = tag.tags.title
-         if ( tag.tags.artist == undefined){
+
+         if (tag.tags.artist == undefined) {
+            navigator.mediaSession.metadata.artist = ""
             artista.innerHTML = ""
          } else {
+            navigator.mediaSession.metadata.artist = tag.tags.artist
             artista.innerHTML = tag.tags.artist
          }
 
          try {
             const { data, format } = tag.tags.picture;
-            let stringB64 = Buffer.from(data)           // conversao do array do array de dados da imagem e 
-            cover_album.src = `data:${format};base64,${stringB64.toString('base64')}`; // converter para string
+
+            let stringB64 = Buffer.from(data, "base64")           // conversao do array do array de dados da imagem e 
+            stringB64 = `data:${format};base64,${stringB64.toString('base64')}`
+            cover_album.src = stringB64; // converter para string
+            navigator.mediaSession.metadata.artwork = [{ src: stringB64 }]
          } catch (error) {
             cover_album.src = 'icons/padrao.png'
          }
-
       },
       onError: function (error) {
          cover_album.src = 'icons/padrao.png'
-         nome_musica.innerHTML = path_diretorio.split("\\").slice(-1)[0].split(".").slice(0, -1).join(".") //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+         nome_musica.innerHTML = diretorio[indice].split(".").slice(0, -1).join(".")
+         navigator.mediaSession.metadata.title = nome_musica.innerHTML
+
          artista.innerHTML = ""
+         navigator.mediaSession.metadata.artist = ""
          console.log("error: " + error.type, error.info)
       }
    })
@@ -119,128 +151,180 @@ async function selecionar_pasta() {
    return await ipcRenderer.invoke("browse_pasta") // dialog so pode ser usado no main
 }
 
-function listar_playlists() {
-   selecionar_pasta().then(pasta => {
-      if (pasta != undefined) {
-         lista_playlists.innerHTML = ""
-         pasta_playlists = pasta[0]
-         console.log(pasta_playlists)
+function listar_playlists(selecionar = true) {
+   if (selecionar) {
+      selecionar_pasta().then((pasta) => {
+         if (pasta != undefined) {
+            lista_playlists.innerHTML = ""
+            pasta_playlists = pasta[0]
+            console.log(pasta_playlists)
 
-         playlists = fs.readdirSync(pasta_playlists, { withFileTypes: true }) // botar para ler apenas diretorios
-            .filter(arquivo => arquivo.isDirectory())
-            .map(arquivo => arquivo.name)
+            playlists = fs.readdirSync(pasta_playlists, { withFileTypes: true }) // botar para ler apenas diretorios
+               .filter(arquivo => arquivo.isDirectory())
+               .map(arquivo => arquivo.name)
 
-         for (let i of playlists) {
-            let item = document.createElement("li")
-            let texto = document.createElement("p")
-            texto.innerHTML = i
-            texto.setAttribute("class", "playlist")
-            item.setAttribute("onclick", "selecionar_playlist(this)")
-            item.appendChild(texto)
+            for (let i of playlists) {
+               let item = document.createElement("li")
+               let texto = document.createElement("p")
+               texto.innerHTML = i
+               texto.setAttribute("class", "playlist")
+               item.setAttribute("onclick", "selecionar_playlist(this)")
+               item.appendChild(texto)
 
-            lista_playlists.appendChild(item)
-         }
-      }
-   }
-   )
-}
-
-function selecionar_playlist(botao) {
-   if (pasta_selecionada != botao.firstChild.innerHTML) {
-      Array.from(lista_playlists.childNodes).forEach(li => {
-         if (li != botao) {
-            li.setAttribute("class", "disabled")
-            if (li.firstChild.className == "playlist texto_active") {
-               li.firstChild.setAttribute("class", "playlist")
+               lista_playlists.appendChild(item)
             }
          }
-      })
+         setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded, indices_passados, cursor, aleatorio, cache)
 
-      document.getElementById("cabeçalho_musicas").hidden = false
+      }
+      )
+   } else {
+      lista_playlists.innerHTML = ""
+      console.log(pasta_playlists)
 
-      botao.firstChild.setAttribute("class", "playlist texto_active")
-      lista_musicas.innerHTML = ""
+      playlists = fs.readdirSync(pasta_playlists, { withFileTypes: true }) // botar para ler apenas diretorios
+         .filter(arquivo => arquivo.isDirectory())
+         .map(arquivo => arquivo.name)
 
+      for (let i of playlists) {
+         let item = document.createElement("li")
+         let texto = document.createElement("p")
+         texto.innerHTML = i
+         texto.setAttribute("class", "playlist")
+         item.setAttribute("onclick", "selecionar_playlist(this)")
+         item.appendChild(texto)
+
+         lista_playlists.appendChild(item)
+      }
+   }
+}
+
+function selecionar_playlist(botao = pasta_selecionada) {
+   if (pasta_selecionada != botao.firstChild.innerHTML) {
       pasta_selecionada = botao.firstChild.innerHTML
 
-      diretorio = fs.readdirSync(path.join(pasta_playlists, pasta_selecionada), { withFileTypes: true }) //apenas musicas
-         .filter(arquivo => arquivo.isFile() && [".MP3", ".M4A", ".AAC", ".FLAC", ".OGG", ".OGA", ".DOLBY", ".WAV", ".CAF", ".OPUS", ".WEBA"].includes(path.extname(arquivo.name).toUpperCase()))
-         .map(arquivo => path.join(arquivo.name))
+      lista_musicas.innerHTML = ""
+      document.getElementById("cabeçalho_musicas").hidden = false
 
-
-      let caminho = path.join(pasta_playlists, pasta_selecionada)
-
-      async function listar_musicas(diretorio) {            //! melhorar desempenho
-         for (let [i, elemento] of diretorio.entries()) {
-            console.log(i)
-            let linha = document.createElement("article")
-            linha.addEventListener("dblclick", tocar_especifica_clique)
-            linha.setAttribute("id", i)
-
-            let img = document.createElement("img")
-            img.setAttribute("class", "img")
-
-            let nome_musica = document.createElement("p")
-            nome_musica.setAttribute("class", "nome_musicas texto_padrao")
-
-            let ext = document.createElement("p")
-            ext.setAttribute("class", "extensao texto_padrao")
-            ext.innerHTML = path.extname(elemento).toUpperCase()
-
-            await new Promise((resolve) => {
-               jsmediatags.read(path.join(caminho, elemento), {
-                  onSuccess: tag => {
-                     let album = document.createElement("p")
-                     album.setAttribute("class", "album texto_padrao")
-                     
-                     let artista = document.createElement("p")
-                     artista.setAttribute("class", "artista texto_padrao")
-
-                     try {
-                        const { data, format } = tag.tags.picture;
-                        let stringB64 = Buffer.from(data)           // conversao do array do array de dados da imagem e 
-                        img.src = `data:${format};base64,${stringB64.toString('base64')}`; // converter para string
-                     } catch (error) {
-                        img.src = 'icons/padrao.png'
-                        //console.log("musica sem imagem:", tag.tags.title)
-                     }
-
-                     nome_musica.innerHTML = tag.tags.title
-                     artista.innerHTML = tag.tags.artist
-                     album.innerHTML = tag.tags.album
-
-                     nome_musica.appendChild(artista)
-                     linha.appendChild(img)
-                     linha.appendChild(nome_musica)
-                     linha.appendChild(album)
-                     linha.appendChild(ext)
-
-                     lista_musicas.appendChild(linha)
-
-                     resolve()
-                  },
-                  onError: error => {
-                     img.src = 'icons/padrao.png'
-
-                     nome_musica.innerHTML = elemento.split(".").slice(0, -1).join(".")
-
-                     linha.appendChild(img)
-                     linha.appendChild(nome_musica)
-                     linha.appendChild(document.createElement("p"))
-                     linha.appendChild(ext)
-                     lista_musicas.appendChild(linha)
-
-                     console.log("error: " + error.type, error.info)
-                     resolve()
-                  }
-               }
-               )
-            })
-         }
+      if (!(pasta_selecionada in cache)) {
          Array.from(lista_playlists.childNodes).forEach(li => {
-            if (li != botao) { li.setAttribute('class', '') }})
+            if (li != botao) {
+               li.setAttribute("class", "disabled")
+               if (li.firstChild.className == "playlist texto_active") {
+                  li.firstChild.setAttribute("class", "playlist")
+               }
+            }
+         })
+         botao.firstChild.setAttribute("class", "playlist texto_active")
+
+         diretorio = fs.readdirSync(path.join(pasta_playlists, pasta_selecionada), { withFileTypes: true }) //apenas musicas
+            .filter(arquivo => arquivo.isFile() && [".MP3", ".M4A", ".AAC", ".FLAC", ".OGG", ".OGA", ".DOLBY", ".WAV", ".CAF", ".OPUS", ".WEBA"].includes(path.extname(arquivo.name).toUpperCase()))
+            .map(arquivo => path.join(arquivo.name))
+         // .sort(function (a, b) {
+         //    if (fs.statSync(path.join(pasta_playlists, pasta_selecionada) + "/" + a).birthtime < fs.statSync(path.join(pasta_playlists, pasta_selecionada) + "/" + b).birthtime) {
+         //       return 1
+         //    } else {
+         //       return -1
+         //    }
+         // })           em ordem de criação, mais novo > mais velho
+
+         let caminho = path.join(pasta_playlists, pasta_selecionada)
+
+         let frag = document.createDocumentFragment()
+
+         async function listar_musicas(diretorio) {            //! melhorar desempenho
+            for (let [i, elemento] of diretorio.entries()) {
+               console.log(i)
+
+               let linha = document.createElement("article")
+               linha.addEventListener("dblclick", tocar_especifica_clique) // tirar listener daqui, colocar dbclick global e checar elemento clicado
+               linha.setAttribute("id", i)
+
+               let img = document.createElement("img")
+               img.setAttribute("class", "img")
+
+               let nome_musica = document.createElement("p")
+               nome_musica.setAttribute("class", "nome_musicas texto_padrao")
+
+               let ext = document.createElement("p")
+               ext.setAttribute("class", "extensao texto_padrao")
+               ext.innerHTML = path.extname(elemento).toUpperCase()
+
+               await new Promise((resolve) => {
+                  jsmediatags.read(path.join(caminho, elemento), {
+                     onSuccess: tag => {
+                        let album = document.createElement("p")
+                        album.setAttribute("class", "album texto_padrao")
+
+                        let artista = document.createElement("p")
+                        artista.setAttribute("class", "artista texto_padrao")
+
+                        try {
+                           const { data, format } = tag.tags.picture;
+                           let stringB64 = Buffer.from(data)           // conversao do array do array de dados da imagem e 
+                           img.src = `data:${format};base64,${stringB64.toString('base64')}`; // converter para string
+                        } catch (error) {
+                           img.src = 'icons/padrao.png'
+                           //console.log("musica sem imagem:", tag.tags.title)
+                        }
+
+                        nome_musica.innerHTML = tag.tags.title
+                        artista.innerHTML = tag.tags.artist
+                        album.innerHTML = tag.tags.album
+
+
+                        nome_musica.appendChild(artista)
+                        linha.appendChild(img)
+                        linha.appendChild(nome_musica)
+                        linha.appendChild(album)
+                        linha.appendChild(ext)
+                        frag.appendChild(linha)
+
+                        resolve()
+                     },
+                     onError: error => {
+                        img.src = 'icons/padrao.png'
+
+                        nome_musica.innerHTML = elemento.split(".").slice(0, -1).join(".")
+
+                        linha.appendChild(img)
+                        linha.appendChild(nome_musica)
+                        linha.appendChild(document.createElement("p"))
+                        linha.appendChild(ext)
+                        frag.appendChild(linha)
+
+                        console.log("error: " + error.type, error.info)
+                        resolve()
+                     }
+                  }
+                  )
+                  if (i % 20 == 0) {
+                     lista_musicas.appendChild(frag)
+                  }
+               })
+            }
+            lista_musicas.appendChild(frag)
+            cache[`${pasta_selecionada}`] = [Array.from(lista_musicas.children), diretorio]
+
+            Array.from(lista_playlists.childNodes).forEach(li => {
+               if (li != botao) { li.setAttribute('class', '') }
+            })
+            setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
+               indices_passados, cursor, aleatorio, cache) //CACHE lista_musicas.children NAO ESTA FICANDO
+         }
+         listar_musicas(diretorio)
+      } else {
+         botao.firstChild.setAttribute("class", "playlist texto_active")
+         diretorio = cache[`${pasta_selecionada}`][1]
+         for (elemento of cache[`${pasta_selecionada}`][0]) {
+            lista_musicas.appendChild(elemento)
+         }
+
+         Array.from(lista_playlists.childNodes).forEach(li => {
+            if (li != botao) { li.setAttribute('class', '') }
+         })
       }
-      listar_musicas(diretorio)
+
    }
 }
 
@@ -249,25 +333,32 @@ async function background() {
 }
 
 function carregar_sessao() {
-
+   if (getSessaoPassada() != 0) {
+      ({
+         pasta_playlists, pasta_selecionada, indice_loaded,
+         indices_passados, cursor, aleatorio, cache
+      } = getSessaoPassada())
+      listar_playlists(false)
+   }
 }
 
 function carregar_musica(indice = indice_loaded) {
    clearInterval(timer)
+
+   if (diretorio[indice] == undefined) {
+      indice = 0
+      indice_loaded = 0
+   }
    audio.src = path.join(pasta_playlists, pasta_selecionada, diretorio[indice])
 
    timer = setInterval(update_slider, 1000)
-   // audio = new howler.Howl({
-   //   src: [path.join(pasta_playlists, pasta_selecionada, diretorio[indice])],
-   //   html5: true,
-   // })
    atualizar_tela_musica(indice)
 }
 
 function tocar_especifica() {
    carregar_musica(indice_loaded)
 
-   if (article != undefined){
+   if (article != undefined) {
       article.setAttribute("class", "")
    }
    article = document.getElementById(`${indice_loaded}`)
@@ -275,25 +366,30 @@ function tocar_especifica() {
 
    botao_play.src = "icons/pause.svg"
    audio.play()
+   setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
+      indices_passados, cursor, aleatorio, cache)
 }
 
 function tocar_especifica_clique(objeto) {
    indices_passados = []
    cursor = 0
 
-   if (article != undefined){
+   if (article != undefined) {
       article.setAttribute("class", "")
    }
    article = objeto.target.closest("article")
    article.setAttribute("class", "musica_active")
-   
    indice_loaded = Number(article.id)
-   
+
+   indices_passados.push(indice_loaded)
+
    carregar_musica(indice_loaded)
 
    botao_play.src = "icons/pause.svg"
 
    audio.play()
+   setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
+      indices_passados, cursor, aleatorio, cache)
 }
 
 function tocar() {    // botao play
