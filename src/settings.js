@@ -2,6 +2,7 @@ const Store = require('electron-store');
 const storage = new Store();
 
 
+
 function getTamanhotela() {
     const fullscreen = storage.get("fullscreen")
     const tamanho = storage.get("tamanho_tela")
@@ -9,9 +10,10 @@ function getTamanhotela() {
     if (tamanho && fullscreen) {
         return {fullscreen, tamanho}
     } else {
-        const fullscreen = storage.set("fullscreen", true)
-        const tamanho = storage.set("tamanho_tela", [1600, 900])
-        return {fullscreen, tamanho}
+        let padrao = [1600, 900]
+        storage.set("fullscreen", true)
+        storage.set("tamanho_tela", padrao)
+        return (true, padrao)
     }
 }
 
@@ -21,6 +23,9 @@ function setTamanhotela(fullscreen, tamanho) {
     storage.set("tamanho_tela", tamanho)
 }
 
+function construirElementos() {
+    let elemento = document
+}
 function getSessaoPassada(){
     const sessao = storage.get("sessao")
 
