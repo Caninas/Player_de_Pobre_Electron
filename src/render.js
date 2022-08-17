@@ -2,7 +2,9 @@ const fs = require('fs');
 const jsmediatags = require('jsmediatags');
 const { ipcRenderer } = require('electron');
 const path = require('path');
-const { getSessaoPassada, setSessaoPassada } = require("./settings")
+const { getSessaoPassada, setSessaoPassada } = require("./settings");
+const { time } = require('console');
+
 
 var cover_album = document.getElementById("cover_album")
 var nome_musica = document.getElementById("nome_musica")
@@ -60,7 +62,7 @@ document.getElementById("prox").addEventListener("click", proximo)
 document.getElementById("loop").addEventListener("click", loop)
 document.getElementById("random").addEventListener("click", random)
 
-carregar_sessao()
+//carregar_sessao()
 
 function volume(objeto) {
    audio.volume = objeto.srcElement.value / 100
@@ -104,8 +106,8 @@ function random() {
       aleatorio = 0
       fundo_random.style.backgroundColor = ""
    }
-   setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
-      indices_passados, cursor, aleatorio, cache)
+   //setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
+     // indices_passados, cursor, aleatorio, cache)
 }
 
 function atualizar_tela_musica(indice = indice_loaded) { // pegar direto da tela
@@ -177,26 +179,41 @@ function listar_playlists(selecionar = true) {
          setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded, indices_passados, cursor, aleatorio, cache)
 
       }
-      )
-   } else {
-      lista_playlists.innerHTML = ""
-      console.log(pasta_playlists)
+      )}
+   // } else {
+   //    lista_playlists.innerHTML = ""
+   //    console.log(pasta_playlists)
 
-      playlists = fs.readdirSync(pasta_playlists, { withFileTypes: true }) // botar para ler apenas diretorios
-         .filter(arquivo => arquivo.isDirectory())
-         .map(arquivo => arquivo.name)
+   //    playlists = fs.readdirSync(pasta_playlists, { withFileTypes: true }) // botar para ler apenas diretorios
+   //       .filter(arquivo => arquivo.isDirectory())
+   //       .map(arquivo => arquivo.name)
 
-      for (let i of playlists) {
-         let item = document.createElement("li")
-         let texto = document.createElement("p")
-         texto.innerHTML = i
-         texto.setAttribute("class", "playlist")
-         item.setAttribute("onclick", "selecionar_playlist(this)")
-         item.appendChild(texto)
+   //    for (let i of playlists) {
+   //       let item = document.createElement("li")
+   //       let texto = document.createElement("p")
+   //       texto.innerHTML = i
+   //       texto.setAttribute("class", "playlist")
+   //       item.setAttribute("onclick", "selecionar_playlist(this)")
+   //       item.appendChild(texto)
 
-         lista_playlists.appendChild(item)
-      }
-   }
+   //       lista_playlists.appendChild(item)
+   //    }
+   // }
+}
+
+function objeto_elementos(objeto_pai) {
+   let obj = {};
+   obj.nome = objeto_pai.localName;
+   obj.atributos = [];
+   obj.children = [];
+   Array.from(objeto_pai.attributes).forEach(a => {
+      obj.atributos.push({ nome: a.name, valor: a.value });
+   });
+   Array.from(objeto_pai.children).forEach(filho => {
+      obj.children.push(objeto_elementos(filho));
+   });
+
+   return obj;
 }
 
 function selecionar_playlist(botao = pasta_selecionada) {
@@ -205,16 +222,18 @@ function selecionar_playlist(botao = pasta_selecionada) {
 
       lista_musicas.innerHTML = ""
       document.getElementById("cabeçalho_musicas").hidden = false
+      let tempo = performance.now()
+
+      Array.from(lista_playlists.childNodes).forEach(li => {
+         if (li != botao) {
+            li.setAttribute("class", "disabled")
+            if (li.firstChild.className == "playlist texto_active") {
+               li.firstChild.setAttribute("class", "playlist")
+            }
+         }
+      })
 
       if (!(pasta_selecionada in cache)) {
-         Array.from(lista_playlists.childNodes).forEach(li => {
-            if (li != botao) {
-               li.setAttribute("class", "disabled")
-               if (li.firstChild.className == "playlist texto_active") {
-                  li.firstChild.setAttribute("class", "playlist")
-               }
-            }
-         })
          botao.firstChild.setAttribute("class", "playlist texto_active")
 
          diretorio = fs.readdirSync(path.join(pasta_playlists, pasta_selecionada), { withFileTypes: true }) //apenas musicas
@@ -232,6 +251,7 @@ function selecionar_playlist(botao = pasta_selecionada) {
 
          let frag = document.createDocumentFragment()
 
+         console.log(performance.now() - tempo)
          async function listar_musicas(diretorio) {            //! melhorar desempenho
             for (let [i, elemento] of diretorio.entries()) {
                console.log(i)
@@ -304,27 +324,27 @@ function selecionar_playlist(botao = pasta_selecionada) {
                })
             }
             lista_musicas.appendChild(frag)
-            cache[`${pasta_selecionada}`] = [Array.from(lista_musicas.children), diretorio]
-
+            //cache[`${pasta_selecionada}`] = [objeto_elementos(lista_musicas), diretorio]
+            console.log(lista_musicas.childNodes)
             Array.from(lista_playlists.childNodes).forEach(li => {
                if (li != botao) { li.setAttribute('class', '') }
             })
-            setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
-               indices_passados, cursor, aleatorio, cache) //CACHE lista_musicas.children NAO ESTA FICANDO
+            //setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
+              // indices_passados, cursor, aleatorio, cache) //CACHE lista_musicas.children NAO ESTA FICANDO
          }
-         listar_musicas(diretorio)
-      } else {
-         botao.firstChild.setAttribute("class", "playlist texto_active")
-         diretorio = cache[`${pasta_selecionada}`][1]
-         for (elemento of cache[`${pasta_selecionada}`][0]) {
-            lista_musicas.appendChild(elemento)
-         }
+         listar_musicas(diretorio)}
+      // } else {
+      //    botao.firstChild.setAttribute("class", "playlist texto_active")
+      //    diretorio = cache[`${pasta_selecionada}`][1]
+      //    for (elemento of cache[`${pasta_selecionada}`][0]) {
+      //       lista_musicas.appendChild(elemento)
+      //    }
 
-         Array.from(lista_playlists.childNodes).forEach(li => {
-            if (li != botao) { li.setAttribute('class', '') }
-         })
-      }
-
+      //    Array.from(lista_playlists.childNodes).forEach(li => {
+      //       if (li != botao) { li.setAttribute('class', '') }
+      //    })
+      // }
+      
    }
 }
 
@@ -366,8 +386,8 @@ function tocar_especifica() {
 
    botao_play.src = "icons/pause.svg"
    audio.play()
-   setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
-      indices_passados, cursor, aleatorio, cache)
+   //setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
+     // indices_passados, cursor, aleatorio, cache)
 }
 
 function tocar_especifica_clique(objeto) {
@@ -388,8 +408,8 @@ function tocar_especifica_clique(objeto) {
    botao_play.src = "icons/pause.svg"
 
    audio.play()
-   setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
-      indices_passados, cursor, aleatorio, cache)
+  // setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
+    //  indices_passados, cursor, aleatorio, cache)
 }
 
 function tocar() {    // botao play
