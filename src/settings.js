@@ -2,7 +2,6 @@ const Store = require('electron-store');
 const storage = new Store();
 
 
-
 function getTamanhotela() {
     const fullscreen = storage.get("fullscreen")
     const tamanho = storage.get("tamanho_tela")
@@ -23,9 +22,6 @@ function setTamanhotela(fullscreen, tamanho) {
     storage.set("tamanho_tela", tamanho)
 }
 
-function construirElementos() {
-    let elemento = document
-}
 function getSessaoPassada(){
     const sessao = storage.get("sessao")
 
@@ -36,7 +32,7 @@ function getSessaoPassada(){
     }
 }
 
-function setSessaoPassada(pasta_p, pasta_s, indice, indices_p, cursor, random, cache){
+function setSessaoPassada(pasta_p, pasta_s, indice, indices_p, cursor, random, cache_dir){
     storage.set("sessao", {
         "pasta_playlists": pasta_p,
         "pasta_selecionada": pasta_s,
@@ -44,17 +40,19 @@ function setSessaoPassada(pasta_p, pasta_s, indice, indices_p, cursor, random, c
         "indices_passados": indices_p,
         "cursor": cursor,
         "aleatorio": random,
-        "cache": cache,
+        "cache_dir": cache_dir,
     })
-
-
 }
 
+function setVar(indice, indices_p, cursor) {
+
+}
 
 module.exports = {
     getTamanhotela: getTamanhotela,
     setTamanhotela: setTamanhotela,
     getSessaoPassada: getSessaoPassada,
     setSessaoPassada: setSessaoPassada,
+    setVar: setVar,
 
 }
