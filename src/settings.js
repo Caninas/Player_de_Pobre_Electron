@@ -1,13 +1,21 @@
 const Store = require('electron-store');
 const storage = new Store();
 
+function getFileStatus() {
+    const status = [getVars(), getPos(), getState(), getPathPassada(), getTamanhotela(), getVol()]
+    if (status.includes(false)) {
+        return 0
+    } else {
+        return 1
+    }
+}
 
 function getTamanhotela() {
     const fullscreen = storage.get("fullscreen")
     const tamanho = storage.get("tamanho_tela")
 
     if (tamanho && fullscreen) {
-        return {fullscreen, tamanho}
+        return { fullscreen, tamanho }
     } else {
         let padrao = [1600, 900]
         storage.set("fullscreen", true)
@@ -22,37 +30,99 @@ function setTamanhotela(fullscreen, tamanho) {
     storage.set("tamanho_tela", tamanho)
 }
 
-function getSessaoPassada(){
-    const sessao = storage.get("sessao")
+function getPathPassada() {
+    const paths = storage.get("paths")
 
-    if (sessao) {
-        return sessao
+    if (paths) {
+        return paths
     } else {
-        return 0
+        return false
     }
 }
 
-function setSessaoPassada(pasta_p, pasta_s, indice, indices_p, cursor, random, cache_dir){
-    storage.set("sessao", {
+function setPathPassada(pasta_p, pasta_s, cache_dir) {
+    storage.set("paths", {
         "pasta_playlists": pasta_p,
         "pasta_selecionada": pasta_s,
-        "indice_loaded": indice,
-        "indices_passados": indices_p,
-        "cursor": cursor,
-        "aleatorio": random,
         "cache_dir": cache_dir,
     })
 }
 
-function setVar(indice, indices_p, cursor) {
+function setVars(indice, indices_p, cursor) {
+    storage.set("vars", {
+        "indice_loaded": indice,
+        "indices_passados": indices_p,
+        "cursor": cursor,
+    })
+}
 
+function getVars() {
+    const vars = storage.get("vars")
+
+    if (vars) {
+        return vars
+    } else {
+        return false
+    }
+}
+
+function setState(random, loop) {
+    storage.set("state", {
+        "aleatorio": random,
+        "_loop": loop,
+    })
+}
+
+function getState() {
+    const state = storage.get("state")
+
+    if (state) {
+        return state
+    } else {
+        return false
+    }
+}
+
+function setPos(pos_mus) {
+    storage.set("pos_musica", pos_mus)
+}
+
+function getPos() {
+    const pos = storage.get("pos_musica")
+
+    if (pos) {
+        return pos
+    } else {
+        return false
+    }
+}
+
+function setVol(vol) {
+    storage.set("volume", vol)
+}
+
+function getVol() {
+    const vol = storage.get("volume")
+
+    if (vol) {
+        return vol
+    } else {
+        return false
+    }
 }
 
 module.exports = {
     getTamanhotela: getTamanhotela,
     setTamanhotela: setTamanhotela,
-    getSessaoPassada: getSessaoPassada,
-    setSessaoPassada: setSessaoPassada,
-    setVar: setVar,
-
+    getFileStatus: getFileStatus,
+    getPathPassada: getPathPassada,
+    setPathPassada: setPathPassada,
+    setVars: setVars,
+    getVars: getVars,
+    setState: setState,
+    getState: getState,
+    setPos: setPos,
+    getPos: getPos,
+    setVol: setVol,
+    getVol: getVol,
 }

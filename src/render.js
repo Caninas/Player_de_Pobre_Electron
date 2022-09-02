@@ -2,7 +2,7 @@ const fs = require('fs');
 const jsmediatags = require('jsmediatags');
 const { ipcRenderer } = require('electron');
 const path = require('path');
-const { getSessaoPassada, setSessaoPassada, setVar } = require("./settings");
+const { setPathPassada, getPathPassada, setVars, getVars, setState, getState, setPos, getPos, getFileStatus, setVol, getVol } = require("./settings");
 const { time } = require('console');
 
 
@@ -47,7 +47,7 @@ var timer
 
 // eventos
 navigator.mediaSession.metadata = new MediaMetadata()
-navigator.mediaSession.setActionHandler('play', tocar)
+navigator.mediaSession.setActionHandler('play', tocar) // nao usa a funçao adequadamente?
 navigator.mediaSession.setActionHandler('pause', tocar)
 navigator.mediaSession.setActionHandler('stop', tocar)
 navigator.mediaSession.setActionHandler('previoustrack', anterior)
@@ -64,9 +64,40 @@ document.getElementById("random").addEventListener("click", random)
 
 carregar_sessao()
 
+
+function carregar_sessao() {
+   if (getFileStatus() != 0) {
+      ({ pasta_playlists, pasta_selecionada, cache_dir } = getPathPassada());
+      ({ aleatorio, _loop } = getState());
+      ({ indice_loaded, indices_passados, cursor } = getVars());
+      listar_playlists(true)
+      random(true)
+      loop(true)
+      update_slider(true)
+      volume(true)
+   } else {
+      setPathPassada(pasta_playlists, pasta_selecionada, cache_dir)
+      setState(aleatorio, _loop)
+      setVars(indice_loaded, indices_passados, cursor)
+      setPos(0)
+      setVol(audio.volume)
+   }
+}
+
+function setPosiçao() {
+   setPos(audio.currentTime)
+}
 function volume(objeto) {
-   audio.volume = objeto.srcElement.value / 100
-   slider_volume.style.backgroundSize = `${objeto.srcElement.value}% 100%`
+   if (objeto == true) {
+      vol = getVol() * 100
+      slider_volume.value = vol
+   } else {
+      vol = objeto.srcElement.value
+   }
+   audio.volume = vol / 100
+   slider_volume.style.backgroundSize = `${vol}% 100%`
+
+   setVol(audio.volume)
 }
 
 function seek(objeto) {
@@ -74,7 +105,10 @@ function seek(objeto) {
    update_slider()
 }
 
-function update_slider() {
+function update_slider(carregar = false) {
+   if (carregar) {
+      audio.currentTime = getPos()
+   }
    const { duration, currentTime } = audio
    slider_musica.value = `${(currentTime / duration) * 100}`
    //slider_thumb.left = `${7.5 - ((currentTime / duration) * 15)}px`
@@ -82,6 +116,7 @@ function update_slider() {
    slider_musica.style.backgroundSize = `${(currentTime / duration) * 100}% 100%` // mudar para div
 
    duraçao_slider.innerHTML = `${Math.trunc(currentTime / 60)}:${("0" + Math.trunc(currentTime % 60)).slice(-2)}/${Math.trunc(duration / 60)}:${("0" + Math.trunc(duration % 60)).slice(-2)}`
+   setPos(currentTime)
 }
 
 function loop() {
@@ -96,6 +131,7 @@ function loop() {
          fundo_loop.style.backgroundColor = ""
       }
    }
+   setState(aleatorio, _loop)
 }
 
 function random(carregar) {
@@ -113,8 +149,7 @@ function random(carregar) {
          aleatorio = 0
          fundo_random.style.backgroundColor = ""
       }
-      setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
-         indices_passados, cursor, aleatorio, cache_dir)
+      setState(aleatorio, _loop)
    }
 }
 
@@ -177,7 +212,6 @@ function listar_playlists(retomar = false) {
       if (pasta != undefined) {
          lista_playlists.innerHTML = ""
          pasta_playlists = pasta[0]
-         console.log(pasta_playlists)
 
          playlists = fs.readdirSync(pasta_playlists, { withFileTypes: true }) // botar para ler apenas diretorios
             .filter(arquivo => arquivo.isDirectory())
@@ -194,7 +228,7 @@ function listar_playlists(retomar = false) {
             lista_playlists.appendChild(item)
          }
          if (!retomar) {
-            setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded, indices_passados, cursor, aleatorio, cache_dir)
+            setPathPassada(pasta_playlists, pasta_selecionada, cache_dir)
          } else {
             selecionar_playlist(undefined, true)
          }
@@ -339,22 +373,10 @@ function selecionar_playlist(botao, retomar = false) {
             carregar_musica()
          }
 
-         setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded,
-            indices_passados, cursor, aleatorio, cache_dir)
+         setPathPassada(pasta_playlists, pasta_selecionada, cache_dir)
       }
 
       listar_musicas(diretorio)
-   }
-}
-
-function carregar_sessao() {
-   if (getSessaoPassada() != 0) {
-      ({
-         pasta_playlists, pasta_selecionada, indice_loaded,
-         indices_passados, cursor, aleatorio, cache_dir
-      } = getSessaoPassada())
-      listar_playlists(true)
-      random(true)
    }
 }
 
@@ -369,7 +391,7 @@ function carregar_musica(indice = indice_loaded) {
 
    timer = setInterval(update_slider, 1000)
    atualizar_tela_musica(indice)
-   setSessaoPassada(pasta_playlists, pasta_selecionada, indice_loaded, indices_passados, cursor, aleatorio, cache_dir)
+   setVars(indice_loaded, indices_passados, cursor)
 }
 
 function tocar_especifica() {
@@ -402,7 +424,6 @@ function tocar_especifica_clique(objeto) {
 function tocar() {    // botao play
    if (diretorio.length) {
       let botao_src = botao_play.src.split("/").slice(-1)[0]
-
       if (botao_src == "play.svg") {
          botao_play.src = "icons/pause.svg"
 

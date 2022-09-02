@@ -13,28 +13,29 @@ if (require('electron-squirrel-startup')) {
 
 const createWindow = () => {
   const { fullscreen, tamanho } = getTamanhotela()
-  console.log(fullscreen,tamanho)
+  console.log(fullscreen, tamanho)
   const mainWindow = new BrowserWindow({
     width: 1600,
     height: 900,
+    icon: path.join(__dirname, "./icons/icone-100x100.ico"),
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      //preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: true,
       contextIsolation: false,
       enableRemoteModule: true,
     },
   });
-  
+
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
-  
-  if (fullscreen){
+
+  if (fullscreen) {
     mainWindow.maximize()
   }
   mainWindow.on("resized", () => setTamanhotela(false, mainWindow.getSize()))
   mainWindow.on("maximize", () => setTamanhotela(true, mainWindow.getSize()))
   mainWindow.setMenuBarVisibility(false)
-  mainWindow.webContents.openDevTools();
-  
+  //mainWindow.webContents.openDevTools();
+
 };
 
 // electron termina de inicializar => cria window
@@ -54,6 +55,6 @@ app.on('activate', () => {
 });
 
 // quando invoke (render) é chamado o handle com o nome é executado na main
-ipcMain.handle("browse_pasta", () => {  
+ipcMain.handle("browse_pasta", () => {
   return dialog.showOpenDialogSync({ properties: ['openDirectory'] })
 });
