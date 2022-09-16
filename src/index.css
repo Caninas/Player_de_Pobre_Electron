@@ -3,12 +3,23 @@ body {
     Arial, sans-serif;
   padding: 0;
   margin: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+p:hover {
+
+  cursor: default;
+}
+
+img {
+  -webkit-user-drag: none;
 }
 
 .grid_principal {
   display: flex;
   flex-wrap: wrap;
-  width: 100vw;
+  width: auto;
   height: 100vh;
   padding: 0;
   margin: 0;
@@ -97,6 +108,7 @@ body {
 
 section > article {
   display: grid;
+  content-visibility: auto;
   grid-template-columns: 50px 50% calc(calc(100% - calc(50px + 50%)) / 2) calc(calc(100% - calc(50px + 50%)) / 2);
   padding: 7px 0 7px 7px;
   margin: 0 7px 0 0;
@@ -145,6 +157,15 @@ section > article {
 .c-ext {
   font-size: 110%;
   justify-self: center;
+}
+
+.config-texto {
+  margin-top: 25px;
+  margin-left: 40px;
+}
+
+.opçoesConfig {
+  margin: 55px 55px 55px 40px;
 }
 
 .slider {
@@ -276,6 +297,50 @@ section > article {
 #lista_musicas > article {
   /* box-shadow: -15px -8px 20px -4px rgb(0 0 0 / 65%); */
   /* box-shadow: 0px -6px 20px -4px rgb(0 0 0 / 65%); */
+}
+
+#abaConfig {
+  height: 0%;
+  width: 45%;
+  position: fixed;
+  z-index: 1;
+  bottom: 192px;
+  left: calc(50% - 22.5%);
+  background-color: #030028;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  transition: 0.5s;
+  border-radius: 25px 25px 0 0;
+  border: solid #9273ff;
+  border-width: 0px 5px 0 5px;
+}
+
+.btnConfig {
+
+}
+
+button {
+  height: inherit;
+}
+
+#aba {
+  position: absolute;
+  right: 90%;
+  top: calc(100% - 192px);
+  transition: all 0.5s;
+}
+
+.openAba {
+  position: absolute;
+  right: 90%;
+  top: calc(100% - 224px);
+  transition: all 0.5s;
+}
+
+#btnCloseConfig {
+  position: absolute;
+  top: 25px;
+  right: 25px;
 }
 
 #div-loop {

@@ -47,8 +47,8 @@ var timer
 
 // eventos
 navigator.mediaSession.metadata = new MediaMetadata()
-navigator.mediaSession.setActionHandler('play', tocar) // nao usa a funçao adequadamente?
-navigator.mediaSession.setActionHandler('pause', tocar)
+navigator.mediaSession.setActionHandler('play', () => { tocar(); navigator.mediaSession.playbackState = "playing"; }) // nao usa a funçao adequadamente?
+navigator.mediaSession.setActionHandler('pause', () => { tocar(); navigator.mediaSession.playbackState = "paused"; })
 navigator.mediaSession.setActionHandler('stop', tocar)
 navigator.mediaSession.setActionHandler('previoustrack', anterior)
 navigator.mediaSession.setActionHandler('nexttrack', proximo)
@@ -62,10 +62,14 @@ document.getElementById("prox").addEventListener("click", proximo)
 document.getElementById("loop").addEventListener("click", loop)
 document.getElementById("random").addEventListener("click", random)
 
+Array.from(document.getElementsByClassName("btnConfig")).forEach(el => el.addEventListener("click", openConfig))
+Array.from(document.getElementsByClassName("openAba"))[0].addEventListener("click", openAba)
+
+
 carregar_sessao()
 
 
-function carregar_sessao() {
+async function carregar_sessao() {
    if (getFileStatus() != 0) {
       ({ pasta_playlists, pasta_selecionada, cache_dir } = getPathPassada());
       ({ aleatorio, _loop } = getState());
@@ -73,7 +77,6 @@ function carregar_sessao() {
       listar_playlists(true)
       random(true)
       loop(true)
-      update_slider(true)
       volume(true)
    } else {
       setPathPassada(pasta_playlists, pasta_selecionada, cache_dir)
@@ -81,12 +84,14 @@ function carregar_sessao() {
       setVars(indice_loaded, indices_passados, cursor)
       setPos(0)
       setVol(audio.volume)
+
    }
 }
 
 function setPosiçao() {
    setPos(audio.currentTime)
 }
+
 function volume(objeto) {
    if (objeto == true) {
       vol = getVol() * 100
@@ -105,18 +110,16 @@ function seek(objeto) {
    update_slider()
 }
 
-function update_slider(carregar = false) {
-   if (carregar) {
-      audio.currentTime = getPos()
-   }
+function update_slider() {
    const { duration, currentTime } = audio
    slider_musica.value = `${(currentTime / duration) * 100}`
    //slider_thumb.left = `${7.5 - ((currentTime / duration) * 15)}px`
    //${(slider_musica.value / 10) - ((7.5 - ((currentTime / duration) * 15))*6.66666)}
    slider_musica.style.backgroundSize = `${(currentTime / duration) * 100}% 100%` // mudar para div
-
+   
    duraçao_slider.innerHTML = `${Math.trunc(currentTime / 60)}:${("0" + Math.trunc(currentTime % 60)).slice(-2)}/${Math.trunc(duration / 60)}:${("0" + Math.trunc(duration % 60)).slice(-2)}`
    setPos(currentTime)
+   console.log("updateslider")
 }
 
 function loop() {
@@ -153,17 +156,23 @@ function random(carregar) {
    }
 }
 
-function atualizar_tela_musica(indice = indice_loaded) { // pegar direto da tela
-   var path_diretorio = path.join(pasta_playlists, pasta_selecionada, diretorio[indice])
+async function atualizar_tela_musica(indice = indice_loaded) { // pegar direto da tela
+   var path_musica = path.join(pasta_playlists, pasta_selecionada, diretorio[indice]) // mudar nome?
 
-   if (article != undefined) {               // highlight musica
-      article.setAttribute("class", "")
+   try {
+      if (article != null) {
+         article.setAttribute("class", "")
+      }
+   
+      article = document.getElementById(`${indice_loaded}`)
+      if (article != null) {
+         article.setAttribute("class", "musica_active")
+      }
+   } catch (error) {
+      
    }
 
-   article = document.getElementById(`${indice_loaded}`)
-   article.setAttribute("class", "musica_active")
-
-   jsmediatags.read(path_diretorio, {
+   jsmediatags.read(path_musica, {
       onSuccess: function (tag) {
          navigator.mediaSession.metadata.title = tag.tags.title
          nome_musica.innerHTML = tag.tags.title
@@ -252,7 +261,6 @@ function selecionar_playlist(botao, retomar = false) {
    if (diferente) {
       lista_musicas.innerHTML = ""
       document.getElementById("cabeçalho_musicas").hidden = false
-      let tempo = performance.now()
 
       Array.from(lista_playlists.childNodes).forEach(li => {
          if (li != botao) {
@@ -263,22 +271,22 @@ function selecionar_playlist(botao, retomar = false) {
          }
       })
 
-      if (retomar) {
-         botao.setAttribute("class", "playlist texto_active")
-      } else {
-         botao.firstChild.setAttribute("class", "playlist texto_active")
-      }
-
       let caminho = path.join(pasta_playlists, pasta_selecionada)
+      let mudou = false
 
-      if (pasta_selecionada in cache_dir) {
+      diretorio = fs.readdirSync(caminho, { withFileTypes: true })
+         .filter(arquivo => arquivo.isFile() && [".MP3", ".M4A", ".AAC", ".FLAC", ".OGG", ".OGA", ".DOLBY", ".WAV", ".CAF", ".OPUS", ".WEBA"].includes(path.extname(arquivo.name).toUpperCase()))
+      
+      try {
+         mudou = diretorio.length != cache_dir[`${pasta_selecionada}`].length
+      } catch (error) {
+      }
+         
+      if (pasta_selecionada in cache_dir && mudou == false) {              // botao reload
          diretorio = cache_dir[`${pasta_selecionada}`]
       } else {
-         diretorio = fs.readdirSync(caminho, { withFileTypes: true }) //apenas musicas
-            .filter(arquivo => arquivo.isFile() && [".MP3", ".M4A", ".AAC", ".FLAC", ".OGG", ".OGA", ".DOLBY", ".WAV", ".CAF", ".OPUS", ".WEBA"].includes(path.extname(arquivo.name).toUpperCase()))
-            .map(arquivo => path.join(arquivo.name))
-            .sort(function (a, b) {
-               if (fs.statSync(path.join(pasta_playlists, pasta_selecionada) + "/" + a).birthtime < fs.statSync(path.join(pasta_playlists, pasta_selecionada) + "/" + b).birthtime) {
+         diretorio = diretorio.map(arquivo => arquivo.name).sort(function (a, b) {
+               if (fs.statSync(caminho + "/" + a).birthtime < fs.statSync(caminho + "/" + b).birthtime) {
                   return 1
                } else {
                   return -1
@@ -288,95 +296,137 @@ function selecionar_playlist(botao, retomar = false) {
          cache_dir[`${pasta_selecionada}`] = diretorio
       }
 
+      if (retomar) {
+         const funçaoT = async () => {
+            botao.setAttribute("class", "playlist texto_active")
+            carregar_musica()
+            audio.currentTime = getPos()
+            await tocar() // conserta o bug dos listeners de botao nao respondendo (linha 50) antes de se dar play no minimo 1 vez
+            tocar()
+         }
+         funçaoT()
+
+      } else {
+         botao.firstChild.setAttribute("class", "playlist texto_active")
+      }
+
       let frag = document.createDocumentFragment()
-
-      console.log(performance.now() - tempo)
-
+      let tempoTotal = 0
+      let tempo1 = performance.now()
       async function listar_musicas(diretorio) {            //! melhorar desempenho
          for (let [i, elemento] of diretorio.entries()) {
             console.log(i)
-
+            
             let linha = document.createElement("article")
             linha.addEventListener("dblclick", tocar_especifica_clique) // tirar listener daqui, colocar dbclick global e checar elemento clicado
             linha.setAttribute("id", i)
-
-            let img = document.createElement("img")
-            img.setAttribute("class", "img")
-
-            let nome_musica = document.createElement("p")
-            nome_musica.setAttribute("class", "nome_musicas texto_padrao")
-
-            let ext = document.createElement("p")
-            ext.setAttribute("class", "extensao texto_padrao")
-            ext.innerHTML = path.extname(elemento).toUpperCase()
-
+            // let img = document.createElement("img")
+            // img.setAttribute("class", "img")
+            
+            // let nome_musica = document.createElement("p")
+            // nome_musica.setAttribute("class", "nome_musicas texto_padrao")
+            
+            // let ext = document.createElement("p")
+            // ext.setAttribute("class", "extensao texto_padrao")
+            let ext = path.extname(elemento).toUpperCase()
+            
             await new Promise((resolve) => {
                jsmediatags.read(path.join(caminho, elemento), {
                   onSuccess: tag => {
-                     let album = document.createElement("p")
-                     album.setAttribute("class", "album texto_padrao")
-
-                     let artista = document.createElement("p")
-                     artista.setAttribute("class", "artista texto_padrao")
-
+                     let src = ""
+                     // let album = document.createElement("p")
+                     // album.setAttribute("class", "album texto_padrao")
+                     
+                     // let artista = document.createElement("p")
+                     // artista.setAttribute("class", "artista texto_padrao")
+                     
                      try {
                         const { data, format } = tag.tags.picture;
                         let stringB64 = Buffer.from(data)           // conversao do array do array de dados da imagem e 
-                        img.src = `data:${format};base64,${stringB64.toString('base64')}`; // converter para string
+                        src = `data:${format};base64,${stringB64.toString('base64')}`; // converter para string
                      } catch (error) {
-                        img.src = 'icons/padrao.png'
+                        src = 'icons/padrao.png'
                         //console.log("musica sem imagem:", tag.tags.title)
                      }
-
-                     nome_musica.innerHTML = tag.tags.title
-                     artista.innerHTML = tag.tags.artist
-                     album.innerHTML = tag.tags.album
-
-
-                     nome_musica.appendChild(artista)
-                     linha.appendChild(img)
-                     linha.appendChild(nome_musica)
-                     linha.appendChild(album)
-                     linha.appendChild(ext)
+                     
+                     // nome_musica.innerHTML = tag.tags.title
+                     // artista.innerHTML = tag.tags.artist
+                     // album.innerHTML = tag.tags.album
+                     
+                     let htmlStr = `
+                     <img class="img" src="${src}">
+                     <p class="nome_musicas texto_padrao">
+                     ${tag.tags.title}
+                     <br>
+                     <span class="artista texto_padrao">
+                     ${tag.tags.artist}
+                     </span>
+                     </p>
+                     <p class="album texto_padrao">${tag.tags.album}</p>
+                     <p class="extensao texto_padrao">${ext}</p>`
+                     //console.log(tempoTotal)
+                     
+                     // nome_musica.appendChild(artista)
+                     // linha.appendChild(img)
+                     // linha.appendChild(nome_musica)
+                     // linha.appendChild(album)
+                     // linha.appendChild(ext)
+                     linha.innerHTML = htmlStr
                      frag.appendChild(linha)
-
+                     tempoTotal += (performance.now() - tempo)
                      resolve()
                   },
                   onError: error => {
-                     img.src = 'icons/padrao.png'
 
-                     nome_musica.innerHTML = elemento.split(".").slice(0, -1).join(".")
+                     let src = 'icons/padrao.png'
+                     
+                     let htmlStr = `
+                     <img class="img" src="${src}">
+                     <p class="nome_musicas texto_padrao">
+                     ${elemento.split(".").slice(0, -1).join(".")}
+                     </p>
+                     <p class="extensao texto_padrao">${ext}</p>`
 
-                     linha.appendChild(img)
-                     linha.appendChild(nome_musica)
-                     linha.appendChild(document.createElement("p"))
-                     linha.appendChild(ext)
+                     //nome_musica.innerHTML = elemento.split(".").slice(0, -1).join(".")
+                     // linha.appendChild(img)
+                     // linha.appendChild(nome_musica)
+                     // linha.appendChild(document.createElement("p"))
+                     // linha.appendChild(ext)
+                     linha.innerHTML = htmlStr
                      frag.appendChild(linha)
 
                      console.log("error: " + error.type, error.info)
+                     tempoTotal += (performance.now() - tempo)
                      resolve()
                   }
+               })
+               let tempo = performance.now()
+               if (i % 15 == 0) {                        
+                  lista_musicas.appendChild(frag)        // bottleneck no render
                }
-               )
-               if (i % 20 == 0) {
-                  lista_musicas.appendChild(frag)
-               }
+               tempoTotal += (performance.now() - tempo)
             })
          }
-         lista_musicas.appendChild(frag)
 
+
+         lista_musicas.appendChild(frag)
+         console.log(tempoTotal)
          Array.from(lista_playlists.childNodes).forEach(li => {
             if (li != botao) { li.setAttribute('class', '') }
          })
 
          if (retomar) {
-            carregar_musica()
+            article = document.getElementById(`${indice_loaded}`)
+            if (article != null) {
+               article.setAttribute("class", "musica_active")
+            }
          }
+         console.log(performance.now() - tempo1)
 
          setPathPassada(pasta_playlists, pasta_selecionada, cache_dir)
       }
-
       listar_musicas(diretorio)
+
    }
 }
 
@@ -388,8 +438,9 @@ function carregar_musica(indice = indice_loaded) {
       indice_loaded = 0
    }
    audio.src = path.join(pasta_playlists, pasta_selecionada, diretorio[indice])
+   audio.addEventListener("loadedmetadata", update_slider)
 
-   timer = setInterval(update_slider, 1000)
+   timer = setInterval(update_slider, 500)
    atualizar_tela_musica(indice)
    setVars(indice_loaded, indices_passados, cursor)
 }
@@ -421,14 +472,14 @@ function tocar_especifica_clique(objeto) {
    audio.play()
 }
 
-function tocar() {    // botao play
+async function tocar() {    // botao play
    if (diretorio.length) {
       let botao_src = botao_play.src.split("/").slice(-1)[0]
       if (botao_src == "play.svg") {
          botao_play.src = "icons/pause.svg"
 
          if (audio.src != "") {
-            audio.play()
+            await audio.play()
          } else {
             if (aleatorio == 0) {
                tocar_especifica()
@@ -438,11 +489,10 @@ function tocar() {    // botao play
                indices_passados.push(indice_loaded)
                tocar_especifica()
             }
-
          }
       } else {
          botao_play.src = "icons/play.svg"
-         audio.pause()
+         await audio.pause()
       }
    }
 }
@@ -521,5 +571,36 @@ function proximo() {                             // botao proximo
 
          }
       }
+   }
+}
+
+function openConfig() {
+   let aba = document.getElementById("abaConfig")
+
+   if (aba.style.height == "") {
+      aba.style.height = "50%"
+      aba.style.borderWidth = "5px 5px 0 5px"
+      document.getElementsByClassName("grid_principal")[0].style.bottom = "50%"
+   } else {
+      aba.style.height = ""
+      aba.style.borderWidth = ""
+      document.getElementsByClassName("grid_principal")[0].style.bottom = "0%"
+   }
+}
+
+function openAba() {
+   let aba = document.getElementById("aba")
+   let openAba = document.getElementsByClassName("openAba")[0]
+
+   if (aba.style.top == "calc(100% - 192px)" || aba.style.top == "") {
+      aba.style.top = "calc(100% - 224px)"
+      openAba.style.top = "calc(100% - 256px)"
+      //aba.style.borderWidth = "5px 5px 0 5px"
+      //document.getElementsByClassName("grid_principal")[0].style.bottom = "50%"
+   } else {
+      aba.style.top = "calc(100% - 192px)"
+      openAba.style.top = "calc(100% - 224px)"
+      //aba.style.borderWidth = ""
+      //document.getElementsByClassName("grid_principal")[0].style.bottom = "0%"
    }
 }

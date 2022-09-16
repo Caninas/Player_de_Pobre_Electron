@@ -13,10 +13,10 @@ if (require('electron-squirrel-startup')) {
 
 const createWindow = () => {
   const { fullscreen, tamanho } = getTamanhotela()
-  console.log(fullscreen, tamanho)
+
   const mainWindow = new BrowserWindow({
-    width: 1600,
-    height: 900,
+    width: tamanho[0],
+    height: tamanho[1],
     icon: path.join(__dirname, "./icons/icone-100x100.ico"),
     webPreferences: {
       //preload: path.join(__dirname, 'preload.js'),

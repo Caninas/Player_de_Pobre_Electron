@@ -13,8 +13,7 @@ function getFileStatus() {
 function getTamanhotela() {
     const fullscreen = storage.get("fullscreen")
     const tamanho = storage.get("tamanho_tela")
-
-    if (tamanho && fullscreen) {
+    if (fullscreen != undefined && tamanho != undefined ) {
         return { fullscreen, tamanho }
     } else {
         let padrao = [1600, 900]
@@ -25,7 +24,6 @@ function getTamanhotela() {
 }
 
 function setTamanhotela(fullscreen, tamanho) {
-    console.log(fullscreen, tamanho)
     storage.set("fullscreen", fullscreen)
     storage.set("tamanho_tela", tamanho)
 }
@@ -110,6 +108,8 @@ function getVol() {
         return false
     }
 }
+
+
 
 module.exports = {
     getTamanhotela: getTamanhotela,
