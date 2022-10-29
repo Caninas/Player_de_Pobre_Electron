@@ -1,7 +1,9 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const { ipcMain, dialog } = require('electron')
-const { getTamanhotela, setTamanhotela } = require("./settings")
+const { getTamanhotela, setTamanhotela, setPos } = require("./settings");
+const { savePos } = require('./preload');
+
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 // eslint-disable-next-line global-require
@@ -18,13 +20,21 @@ const createWindow = () => {
     width: tamanho[0],
     height: tamanho[1],
     icon: path.join(__dirname, "./icons/icone-100x100.ico"),
+    show: false,
+    backgroundColor: '#1c0d49',
+    titleBarOverlay: true,
     webPreferences: {
       //preload: path.join(__dirname, 'preload.js'),
+      nodeIntegrationInWorker: true,
       nodeIntegration: true,
       contextIsolation: false,
       enableRemoteModule: true,
     },
   });
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show()
+  })
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
@@ -58,3 +68,9 @@ app.on('activate', () => {
 ipcMain.handle("browse_pasta", () => {
   return dialog.showOpenDialogSync({ properties: ['openDirectory'] })
 });
+
+ipcMain.handle("salvar_pos", (e, pos) => {      // salva posiçao musica quando fecha
+  setPos(pos)
+});
+
+

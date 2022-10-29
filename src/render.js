@@ -2,8 +2,8 @@ const fs = require('fs');
 const jsmediatags = require('jsmediatags');
 const { ipcRenderer } = require('electron');
 const path = require('path');
-const { setPathPassada, getPathPassada, setVars, getVars, setState, getState, setPos, getPos, getFileStatus, setVol, getVol } = require("./settings");
-const { time } = require('console');
+const { setPathPassada, getPathPassada, setVars, getVars, setState, getState, setPos, getPos, getFileStatus, setVol, getVol,
+      } = require("./settings"); //setPrefs, getPrefs
 
 
 var cover_album = document.getElementById("cover_album")
@@ -21,7 +21,7 @@ var botao_play = document.getElementById("play")
 var fundo_random = document.getElementById("div-random") // usar parente na funçao
 var fundo_loop = document.getElementById("div-loop")
 
-var audio = document.getElementById("audio")
+audio = document.getElementById("audio")
 audio.volume = 0.5
 slider_volume.value = 50
 slider_musica.value = 0
@@ -47,12 +47,13 @@ var timer
 
 // eventos
 navigator.mediaSession.metadata = new MediaMetadata()
-navigator.mediaSession.setActionHandler('play', () => { tocar(); navigator.mediaSession.playbackState = "playing"; }) // nao usa a funçao adequadamente?
-navigator.mediaSession.setActionHandler('pause', () => { tocar(); navigator.mediaSession.playbackState = "paused"; })
+navigator.mediaSession.setActionHandler('play', tocar) // nao usa a funçao adequadamente?
+navigator.mediaSession.setActionHandler('pause', tocar)
 navigator.mediaSession.setActionHandler('stop', tocar)
 navigator.mediaSession.setActionHandler('previoustrack', anterior)
 navigator.mediaSession.setActionHandler('nexttrack', proximo)
 
+window.addEventListener('unload', () => ipcRenderer.invoke("salvar_pos", audio.currentTime))
 slider_volume.addEventListener("input", volume)
 slider_musica.addEventListener("input", seek)
 audio.addEventListener("ended", proximo)
@@ -62,8 +63,6 @@ document.getElementById("prox").addEventListener("click", proximo)
 document.getElementById("loop").addEventListener("click", loop)
 document.getElementById("random").addEventListener("click", random)
 
-Array.from(document.getElementsByClassName("btnConfig")).forEach(el => el.addEventListener("click", openConfig))
-Array.from(document.getElementsByClassName("openAba"))[0].addEventListener("click", openAba)
 
 
 carregar_sessao()
@@ -82,14 +81,11 @@ async function carregar_sessao() {
       setPathPassada(pasta_playlists, pasta_selecionada, cache_dir)
       setState(aleatorio, _loop)
       setVars(indice_loaded, indices_passados, cursor)
-      setPos(0)
+      setPos(0.01)
       setVol(audio.volume)
+      //setPrefs(false, false)
 
    }
-}
-
-function setPosiçao() {
-   setPos(audio.currentTime)
 }
 
 function volume(objeto) {
@@ -116,10 +112,10 @@ function update_slider() {
    //slider_thumb.left = `${7.5 - ((currentTime / duration) * 15)}px`
    //${(slider_musica.value / 10) - ((7.5 - ((currentTime / duration) * 15))*6.66666)}
    slider_musica.style.backgroundSize = `${(currentTime / duration) * 100}% 100%` // mudar para div
-   
+
    duraçao_slider.innerHTML = `${Math.trunc(currentTime / 60)}:${("0" + Math.trunc(currentTime % 60)).slice(-2)}/${Math.trunc(duration / 60)}:${("0" + Math.trunc(duration % 60)).slice(-2)}`
-   setPos(currentTime)
    console.log("updateslider")
+
 }
 
 function loop() {
@@ -163,13 +159,13 @@ async function atualizar_tela_musica(indice = indice_loaded) { // pegar direto d
       if (article != null) {
          article.setAttribute("class", "")
       }
-   
+
       article = document.getElementById(`${indice_loaded}`)
       if (article != null) {
          article.setAttribute("class", "musica_active")
       }
    } catch (error) {
-      
+
    }
 
    jsmediatags.read(path_musica, {
@@ -276,22 +272,24 @@ function selecionar_playlist(botao, retomar = false) {
 
       diretorio = fs.readdirSync(caminho, { withFileTypes: true })
          .filter(arquivo => arquivo.isFile() && [".MP3", ".M4A", ".AAC", ".FLAC", ".OGG", ".OGA", ".DOLBY", ".WAV", ".CAF", ".OPUS", ".WEBA"].includes(path.extname(arquivo.name).toUpperCase()))
-      
+
       try {
          mudou = diretorio.length != cache_dir[`${pasta_selecionada}`].length
       } catch (error) {
       }
-         
+
       if (pasta_selecionada in cache_dir && mudou == false) {              // botao reload
+         console.log("pega dir")
          diretorio = cache_dir[`${pasta_selecionada}`]
       } else {
+         console.log("novo diretorio")
          diretorio = diretorio.map(arquivo => arquivo.name).sort(function (a, b) {
-               if (fs.statSync(caminho + "/" + a).birthtime < fs.statSync(caminho + "/" + b).birthtime) {
-                  return 1
-               } else {
-                  return -1
-               }
-            })           // em ordem de criação, mais novo > mais velho
+            if (fs.statSync(caminho + "/" + a).birthtime < fs.statSync(caminho + "/" + b).birthtime) {
+               return 1
+            } else {
+               return -1
+            }
+         })           // em ordem de criação, mais novo > mais velho
 
          cache_dir[`${pasta_selecionada}`] = diretorio
       }
@@ -301,98 +299,79 @@ function selecionar_playlist(botao, retomar = false) {
             botao.setAttribute("class", "playlist texto_active")
             carregar_musica()
             audio.currentTime = getPos()
+            let v = audio.volume
+            audio.volume = 0
             await tocar() // conserta o bug dos listeners de botao nao respondendo (linha 50) antes de se dar play no minimo 1 vez
             tocar()
+            audio.volume = v
          }
          funçaoT()
-
       } else {
          botao.firstChild.setAttribute("class", "playlist texto_active")
       }
 
-      let frag = document.createDocumentFragment()
       let tempoTotal = 0
       let tempo1 = performance.now()
       async function listar_musicas(diretorio) {            //! melhorar desempenho
+         let frag = document.createDocumentFragment()
+
          for (let [i, elemento] of diretorio.entries()) {
             console.log(i)
-            
+            // tirar listener daqui, colocar dbclick global e checar elemento clicado
             let linha = document.createElement("article")
-            linha.addEventListener("dblclick", tocar_especifica_clique) // tirar listener daqui, colocar dbclick global e checar elemento clicado
+            linha.addEventListener("dblclick", tocar_especifica_clique)
             linha.setAttribute("id", i)
-            // let img = document.createElement("img")
-            // img.setAttribute("class", "img")
-            
-            // let nome_musica = document.createElement("p")
-            // nome_musica.setAttribute("class", "nome_musicas texto_padrao")
-            
-            // let ext = document.createElement("p")
-            // ext.setAttribute("class", "extensao texto_padrao")
-            let ext = path.extname(elemento).toUpperCase()
-            
+
+            let img = document.createElement("img")
+            img.setAttribute("class", "img")
+
+            let nome_musica = document.createElement("p")
+            nome_musica.setAttribute("class", "nome_musicas texto_padrao")
+
+            let ext = document.createElement("p")
+            ext.setAttribute("class", "extensao texto_padrao")
+
             await new Promise((resolve) => {
                jsmediatags.read(path.join(caminho, elemento), {
                   onSuccess: tag => {
-                     let src = ""
-                     // let album = document.createElement("p")
-                     // album.setAttribute("class", "album texto_padrao")
-                     
-                     // let artista = document.createElement("p")
-                     // artista.setAttribute("class", "artista texto_padrao")
-                     
+                     let album = document.createElement("p")
+                     album.setAttribute("class", "album texto_padrao")
+
+                     let artista = document.createElement("p")
+                     artista.setAttribute("class", "artista texto_padrao")
+
                      try {
                         const { data, format } = tag.tags.picture;
                         let stringB64 = Buffer.from(data)           // conversao do array do array de dados da imagem e 
-                        src = `data:${format};base64,${stringB64.toString('base64')}`; // converter para string
+                        img.src = `data:${format};base64,${stringB64.toString('base64')}`; // converter para string
                      } catch (error) {
-                        src = 'icons/padrao.png'
+                        img.src = 'icons/padrao.png'
                         //console.log("musica sem imagem:", tag.tags.title)
                      }
-                     
-                     // nome_musica.innerHTML = tag.tags.title
-                     // artista.innerHTML = tag.tags.artist
-                     // album.innerHTML = tag.tags.album
-                     
-                     let htmlStr = `
-                     <img class="img" src="${src}">
-                     <p class="nome_musicas texto_padrao">
-                     ${tag.tags.title}
-                     <br>
-                     <span class="artista texto_padrao">
-                     ${tag.tags.artist}
-                     </span>
-                     </p>
-                     <p class="album texto_padrao">${tag.tags.album}</p>
-                     <p class="extensao texto_padrao">${ext}</p>`
-                     //console.log(tempoTotal)
-                     
-                     // nome_musica.appendChild(artista)
-                     // linha.appendChild(img)
-                     // linha.appendChild(nome_musica)
-                     // linha.appendChild(album)
-                     // linha.appendChild(ext)
-                     linha.innerHTML = htmlStr
+
+                     nome_musica.innerHTML = tag.tags.title
+                     artista.innerHTML = tag.tags.artist
+                     album.innerHTML = tag.tags.album
+
+                     nome_musica.appendChild(artista)
+                     linha.appendChild(img)
+                     linha.appendChild(nome_musica)
+                     linha.appendChild(album)
+                     linha.appendChild(ext)
+
                      frag.appendChild(linha)
                      tempoTotal += (performance.now() - tempo)
                      resolve()
                   },
                   onError: error => {
+                     img.src = 'icons/padrao.png'
+                     nome_musica.innerHTML = elemento.split(".").slice(0, -1).join(".")
 
-                     let src = 'icons/padrao.png'
-                     
-                     let htmlStr = `
-                     <img class="img" src="${src}">
-                     <p class="nome_musicas texto_padrao">
-                     ${elemento.split(".").slice(0, -1).join(".")}
-                     </p>
-                     <p class="extensao texto_padrao">${ext}</p>`
+                     linha.appendChild(img)
+                     linha.appendChild(nome_musica)
+                     linha.appendChild(document.createElement("p"))
+                     linha.appendChild(ext)
 
-                     //nome_musica.innerHTML = elemento.split(".").slice(0, -1).join(".")
-                     // linha.appendChild(img)
-                     // linha.appendChild(nome_musica)
-                     // linha.appendChild(document.createElement("p"))
-                     // linha.appendChild(ext)
-                     linha.innerHTML = htmlStr
                      frag.appendChild(linha)
 
                      console.log("error: " + error.type, error.info)
@@ -401,17 +380,20 @@ function selecionar_playlist(botao, retomar = false) {
                   }
                })
                let tempo = performance.now()
-               if (i % 15 == 0) {                        
+               if (i % 12 == 0) {
                   lista_musicas.appendChild(frag)        // bottleneck no render
                }
                tempoTotal += (performance.now() - tempo)
             })
          }
 
+         lista_musicas.appendChild(frag)        // append do resto caso sobre (0 < (diretorio.length % 15) < 15)
 
-         lista_musicas.appendChild(frag)
-         console.log(tempoTotal)
-         Array.from(lista_playlists.childNodes).forEach(li => {
+         console.log(tempoTotal)             // tempo do if #462
+
+         console.log(performance.now() - tempo1)               // tempo total da função
+
+         Array.from(lista_playlists.childNodes).forEach(li => {        // habilitar botoes de volta
             if (li != botao) { li.setAttribute('class', '') }
          })
 
@@ -421,10 +403,10 @@ function selecionar_playlist(botao, retomar = false) {
                article.setAttribute("class", "musica_active")
             }
          }
-         console.log(performance.now() - tempo1)
 
-         setPathPassada(pasta_playlists, pasta_selecionada, cache_dir)
+         setPathPassada(pasta_playlists, pasta_selecionada, cache_dir)     // salva cache
       }
+
       listar_musicas(diretorio)
 
    }
@@ -440,7 +422,7 @@ function carregar_musica(indice = indice_loaded) {
    audio.src = path.join(pasta_playlists, pasta_selecionada, diretorio[indice])
    audio.addEventListener("loadedmetadata", update_slider)
 
-   timer = setInterval(update_slider, 500)
+   timer = setInterval(update_slider, 1000)
    atualizar_tela_musica(indice)
    setVars(indice_loaded, indices_passados, cursor)
 }
@@ -460,7 +442,7 @@ function tocar_especifica_clique(objeto) {
       article.setAttribute("class", "")
    }
    article = objeto.target.closest("article")
-   article.setAttribute("class", "musica_active")
+   article.class = "musica_active"
    indice_loaded = Number(article.id)
 
    indices_passados.push(indice_loaded)
@@ -571,36 +553,5 @@ function proximo() {                             // botao proximo
 
          }
       }
-   }
-}
-
-function openConfig() {
-   let aba = document.getElementById("abaConfig")
-
-   if (aba.style.height == "") {
-      aba.style.height = "50%"
-      aba.style.borderWidth = "5px 5px 0 5px"
-      document.getElementsByClassName("grid_principal")[0].style.bottom = "50%"
-   } else {
-      aba.style.height = ""
-      aba.style.borderWidth = ""
-      document.getElementsByClassName("grid_principal")[0].style.bottom = "0%"
-   }
-}
-
-function openAba() {
-   let aba = document.getElementById("aba")
-   let openAba = document.getElementsByClassName("openAba")[0]
-
-   if (aba.style.top == "calc(100% - 192px)" || aba.style.top == "") {
-      aba.style.top = "calc(100% - 224px)"
-      openAba.style.top = "calc(100% - 256px)"
-      //aba.style.borderWidth = "5px 5px 0 5px"
-      //document.getElementsByClassName("grid_principal")[0].style.bottom = "50%"
-   } else {
-      aba.style.top = "calc(100% - 192px)"
-      openAba.style.top = "calc(100% - 224px)"
-      //aba.style.borderWidth = ""
-      //document.getElementsByClassName("grid_principal")[0].style.bottom = "0%"
    }
 }

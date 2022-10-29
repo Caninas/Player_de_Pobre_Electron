@@ -2,7 +2,7 @@ const Store = require('electron-store');
 const storage = new Store();
 
 function getFileStatus() {
-    const status = [getVars(), getPos(), getState(), getPathPassada(), getTamanhotela(), getVol()]
+    const status = [getVars(), getPos(), getState(), getPathPassada(), getTamanhotela(), getVol(), ]//getPrefs()
     if (status.includes(false)) {
         return 0
     } else {
@@ -19,7 +19,7 @@ function getTamanhotela() {
         let padrao = [1600, 900]
         storage.set("fullscreen", true)
         storage.set("tamanho_tela", padrao)
-        return (true, padrao)
+        return { "fullscreen": true, "tamanho": padrao }
     }
 }
 
@@ -109,6 +109,22 @@ function getVol() {
     }
 }
 
+// function setPrefs(gravarCache, hideFolder) {
+//     storage.set("preferencias", {
+//         "gravarCache": gravarCache,
+//         "hideFolder": hideFolder,
+//     })
+// }
+
+// function getPrefs() {
+//     const preferencias = storage.get("preferencias")
+//     if (preferencias) {
+//         const { gravarCache, hideFolder } = preferencias
+//         return [gravarCache, hideFolder]
+//     } else {
+//         return false
+//     }
+// }
 
 
 module.exports = {
@@ -125,4 +141,6 @@ module.exports = {
     getPos: getPos,
     setVol: setVol,
     getVol: getVol,
+    // setPrefs: setPrefs,
+    // getPrefs: getPrefs,
 }

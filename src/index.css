@@ -108,7 +108,7 @@ img {
 
 section > article {
   display: grid;
-  content-visibility: auto;
+  /* content-visibility: auto; */
   grid-template-columns: 50px 50% calc(calc(100% - calc(50px + 50%)) / 2) calc(calc(100% - calc(50px + 50%)) / 2);
   padding: 7px 0 7px 7px;
   margin: 0 7px 0 0;
@@ -165,7 +165,12 @@ section > article {
 }
 
 .opçoesConfig {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
   margin: 55px 55px 55px 40px;
+
 }
 
 .slider {
