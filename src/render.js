@@ -170,15 +170,20 @@ async function atualizar_tela_musica(indice = indice_loaded) { // pegar direto d
 
    jsmediatags.read(path_musica, {
       onSuccess: function (tag) {
-         navigator.mediaSession.metadata.title = tag.tags.title
-         nome_musica.innerHTML = tag.tags.title
-
-         if (tag.tags.artist == undefined) {
-            navigator.mediaSession.metadata.artist = ""
-            artista.innerHTML = ""
+         if (tag.tags.title != undefined){
+            nome_musica.innerHTML = tag.tags.title
+            navigator.mediaSession.metadata.title = tag.tags.title
          } else {
+            nome_musica.innerHTML = diretorio[indice].split(".").slice(0, -1).join(".")
+            navigator.mediaSession.metadata.title = nome_musica.innerHTML
+         }
+
+         if (tag.tags.artist != undefined) {
             navigator.mediaSession.metadata.artist = tag.tags.artist
             artista.innerHTML = tag.tags.artist
+         } else {
+            navigator.mediaSession.metadata.artist = ""
+            artista.innerHTML = ""
          }
 
          try {
@@ -190,11 +195,15 @@ async function atualizar_tela_musica(indice = indice_loaded) { // pegar direto d
             navigator.mediaSession.metadata.artwork = [{ src: stringB64 }]
          } catch (error) {
             cover_album.src = 'icons/padrao.png'
+            navigator.mediaSession.metadata.artwork = [{ src: 'icons/padrao.png' }] // n funciona
          }
       },
       onError: function (error) {
          cover_album.src = 'icons/padrao.png'
+         navigator.mediaSession.metadata.artwork = [{ src: 'icons/padrao.png' }]
+         console.log("aqui")
          nome_musica.innerHTML = diretorio[indice].split(".").slice(0, -1).join(".")
+
          navigator.mediaSession.metadata.title = nome_musica.innerHTML
 
          artista.innerHTML = ""
@@ -348,10 +357,10 @@ function selecionar_playlist(botao, retomar = false) {
                         img.src = 'icons/padrao.png'
                         //console.log("musica sem imagem:", tag.tags.title)
                      }
-
-                     nome_musica.innerHTML = tag.tags.title
-                     artista.innerHTML = tag.tags.artist
-                     album.innerHTML = tag.tags.album
+                     
+                     nome_musica.innerHTML = tag.tags.title != undefined ? tag.tags.title : diretorio[i].split(".").slice(0, -1).join(".")
+                     artista.innerHTML = tag.tags.artist != undefined ? tag.tags.artist : ""
+                     album.innerHTML = tag.tags.album != undefined ? tag.tags.album : ""
 
                      nome_musica.appendChild(artista)
                      linha.appendChild(img)
