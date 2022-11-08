@@ -34,7 +34,7 @@ var playlists = ""
 
 var indice_loaded = 0
 var indices_passados = []
-var cursor = 0
+var cursor = -1
 
 var aleatorio = 0
 var _loop = 0
@@ -391,6 +391,7 @@ function selecionar_playlist(botao, retomar = false) {
                let tempo = performance.now()
                if (i % 12 == 0) {
                   lista_musicas.appendChild(frag)        // bottleneck no render
+                  frag = document.createDocumentFragment()
                }
                tempoTotal += (performance.now() - tempo)
             })
@@ -477,6 +478,7 @@ async function tocar() {    // botao play
 
             } else {
                indice_loaded = Math.floor(Math.random() * diretorio.length)
+               while (indices_passados.includes(indice_loaded)) {indice_loaded = Math.floor(Math.random() * diretorio.length)}
                indices_passados.push(indice_loaded)
                tocar_especifica()
             }
@@ -514,7 +516,12 @@ function anterior() {                // botao anterior
                cursor -= 1
                indice_loaded = indices_passados[cursor]
             } else {
+               if (indices_passados.length == diretorio.length) {
+                  cursor = 0
+                  indices_passados = []
+               }      
                indice_loaded = Math.floor(Math.random() * diretorio.length)
+               while (indices_passados.includes(indice_loaded)) {indice_loaded = Math.floor(Math.random() * diretorio.length)}
                indices_passados.unshift(indice_loaded)
             }
             tocar_especifica()
@@ -526,9 +533,7 @@ function anterior() {                // botao anterior
 
 function proximo() {                             // botao proximo
    if (diretorio.length) {
-      if (audio.src == "") {
-         tocar_especifica()
-      } else {
+      if (audio.src != "") {
          botao_play.src = "icons/pause.svg"
 
          if (aleatorio == 0) {                                 //nao-aleatorio
@@ -543,24 +548,27 @@ function proximo() {                             // botao proximo
             }
 
             tocar_especifica()
-
          } else {                                                  //aleatorio
-            if (indices_passados.length > 1 && cursor != indices_passados.length - 1) {
+            if (indices_passados.length > 1 && cursor != indices_passados.length - 1) {      
                cursor += 1
                indice_loaded = indices_passados[cursor]
-            } else if (indices_passados.length == 0) {
-               indice_loaded = Math.floor(Math.random() * diretorio.length)
-               indices_passados.push(indice_loaded)
-
             } else {
+               if (indices_passados.length == diretorio.length) {
+                  cursor = -1
+                  indices_passados = []
+               }      
                cursor += 1
                indice_loaded = Math.floor(Math.random() * diretorio.length)
+               while (indices_passados.includes(indice_loaded)){indice_loaded = Math.floor(Math.random() * diretorio.length)}
                indices_passados.push(indice_loaded)
             }
             console.log(indice_loaded)
             tocar_especifica()
 
          }
+      } else {
+         tocar_especifica()
+         
       }
    }
 }
