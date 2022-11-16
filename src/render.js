@@ -339,6 +339,7 @@ function selecionar_playlist(botao, retomar = false) {
 
             let ext = document.createElement("p")
             ext.setAttribute("class", "extensao texto_padrao")
+            ext.innerHTML = `.${elemento.split(".").pop().toUpperCase()}`
 
             await new Promise((resolve) => {
                jsmediatags.read(path.join(caminho, elemento), {

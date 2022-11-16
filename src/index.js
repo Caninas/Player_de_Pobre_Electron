@@ -1,8 +1,7 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
-const { ipcMain, dialog } = require('electron')
+const { ipcMain, dialog } = require('electron');
 const { getTamanhotela, setTamanhotela, setPos } = require("./settings");
-const { savePos } = require('./preload');
 
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
