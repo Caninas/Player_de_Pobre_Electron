@@ -24,6 +24,7 @@ const createWindow = () => {
     titleBarOverlay: true,
     webPreferences: {
       //preload: path.join(__dirname, 'preload.js'),
+      devTools: false,
       nodeIntegrationInWorker: true,
       nodeIntegration: true,
       contextIsolation: false,
@@ -43,7 +44,6 @@ const createWindow = () => {
   mainWindow.on("resized", () => setTamanhotela(false, mainWindow.getSize()))
   mainWindow.on("maximize", () => setTamanhotela(true, mainWindow.getSize()))
   mainWindow.setMenuBarVisibility(false)
-  //mainWindow.webContents.openDevTools();
 
 };
 
