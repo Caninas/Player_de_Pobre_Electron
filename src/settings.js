@@ -2,7 +2,7 @@ const Store = require('electron-store');
 const storage = new Store();
 
 function getFileStatus() {
-    const status = [getVars(), getPos(), getState(), getPathPassada(), getTamanhotela(), getVol(), ]//getPrefs()
+    const status = [getVars(), getPos(), getState(), getPathPassada(), getTamanhotela(), getVol()]//getPrefs()
     if (status.includes(false)) {
         return 0
     } else {
@@ -38,10 +38,10 @@ function getPathPassada() {
     }
 }
 
-function setPathPassada(pasta_p, pasta_s, cache_dir) {
+function setPathPassada(path_t, pasta_t, cache_dir) {
     storage.set("paths", {
-        "pasta_playlists": pasta_p,
-        "pasta_selecionada": pasta_s,
+        "path_tocando": path_t,
+        "pasta_tocando": pasta_t,
         "cache_dir": cache_dir,
     })
 }
@@ -126,6 +126,21 @@ function getVol() {
 //     }
 // }
 
+// function getID() {
+//     const id = storage.get("id")
+
+//     if (id) {
+//         return id
+//     } else {
+//         return false
+//     }
+// }
+
+// function setID(id) {
+//     storage.set("id", id)
+// }
+
+
 
 module.exports = {
     getTamanhotela: getTamanhotela,
@@ -141,6 +156,8 @@ module.exports = {
     getPos: getPos,
     setVol: setVol,
     getVol: getVol,
+    // setID: setID,
+    // getID: getID,
     // setPrefs: setPrefs,
     // getPrefs: getPrefs,
 }

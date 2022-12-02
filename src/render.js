@@ -3,8 +3,7 @@ const jsmediatags = require('jsmediatags');
 const { ipcRenderer } = require('electron');
 const path = require('path');
 const { setPathPassada, getPathPassada, setVars, getVars, setState, getState, setPos, getPos, getFileStatus, setVol, getVol,
-      } = require("./settings"); //setPrefs, getPrefs
-
+      } = require("./settings"); //setPrefs, getPrefs, getID, setID
 
 var cover_album = document.getElementById("cover_album")
 var nome_musica = document.getElementById("nome_musica")
@@ -30,6 +29,8 @@ slider_musica.value = 0
 var diretorio = []
 var pasta_playlists = ""
 var pasta_selecionada = ""
+var pasta_tocando = ""
+var path_tocando = ""
 var playlists = ""
 
 var indice_loaded = 0
@@ -57,6 +58,7 @@ window.addEventListener('unload', () => ipcRenderer.invoke("salvar_pos", audio.c
 slider_volume.addEventListener("input", volume)
 slider_musica.addEventListener("input", seek)
 audio.addEventListener("ended", proximo)
+audio.addEventListener("loadedmetadata", update_slider)
 botao_play.addEventListener("click", tocar)
 document.getElementById("ant").addEventListener("click", anterior)
 document.getElementById("prox").addEventListener("click", proximo)
@@ -70,15 +72,17 @@ carregar_sessao()
 
 async function carregar_sessao() {
    if (getFileStatus() != 0) {
-      ({ pasta_playlists, pasta_selecionada, cache_dir } = getPathPassada());
+      ({ path_tocando, pasta_tocando, cache_dir } = getPathPassada());
       ({ aleatorio, _loop } = getState());
       ({ indice_loaded, indices_passados, cursor } = getVars());
+      pasta_selecionada = pasta_tocando
+      pasta_playlists = (path_tocando.split("\\").slice(0, -1)).join("\\")
       listar_playlists(true)
       random(true)
       loop(true)
       volume(true)
    } else {
-      setPathPassada(pasta_playlists, pasta_selecionada, cache_dir)
+      setPathPassada(path_tocando, pasta_tocando, cache_dir)
       setState(aleatorio, _loop)
       setVars(indice_loaded, indices_passados, cursor)
       setPos(0.01)
@@ -107,15 +111,16 @@ function seek(objeto) {
 }
 
 function update_slider() {
-   const { duration, currentTime } = audio
-   slider_musica.value = `${(currentTime / duration) * 100}`
-   //slider_thumb.left = `${7.5 - ((currentTime / duration) * 15)}px`
-   //${(slider_musica.value / 10) - ((7.5 - ((currentTime / duration) * 15))*6.66666)}
-   slider_musica.style.backgroundSize = `${(currentTime / duration) * 100}% 100%` // mudar para div
-
-   duraçao_slider.innerHTML = `${Math.trunc(currentTime / 60)}:${("0" + Math.trunc(currentTime % 60)).slice(-2)}/${Math.trunc(duration / 60)}:${("0" + Math.trunc(duration % 60)).slice(-2)}`
-   console.log("updateslider")
-
+   if (!audio.paused) {
+      const { duration, currentTime } = audio
+      slider_musica.value = `${(currentTime / duration) * 100}`
+      //slider_thumb.left = `${7.5 - ((currentTime / duration) * 15)}px`
+      //${(slider_musica.value / 10) - ((7.5 - ((currentTime / duration) * 15))*6.66666)}
+      slider_musica.style.backgroundSize = `${(currentTime / duration) * 100}% 100%` // mudar para div
+   
+      duraçao_slider.innerHTML = `${Math.trunc(currentTime / 60)}:${("0" + Math.trunc(currentTime % 60)).slice(-2)}/${Math.trunc(duration / 60)}:${("0" + Math.trunc(duration % 60)).slice(-2)}`
+      console.log("updateslider")
+   }
 }
 
 function loop() {
@@ -153,7 +158,7 @@ function random(carregar) {
 }
 
 async function atualizar_tela_musica(indice = indice_loaded) { // pegar direto da tela
-   var path_musica = path.join(pasta_playlists, pasta_selecionada, diretorio[indice]) // mudar nome?
+   var path_musica = path.join(path_tocando, diretorio_tocando[indice]) // mudar nome?
 
    try {
       if (article != null) {
@@ -161,11 +166,10 @@ async function atualizar_tela_musica(indice = indice_loaded) { // pegar direto d
       }
 
       article = document.getElementById(`${indice_loaded}`)
-      if (article != null) {
+      if (article != null && pasta_tocando == pasta_selecionada) {
          article.setAttribute("class", "musica_active")
       }
    } catch (error) {
-
    }
 
    jsmediatags.read(path_musica, {
@@ -174,7 +178,7 @@ async function atualizar_tela_musica(indice = indice_loaded) { // pegar direto d
             nome_musica.innerHTML = tag.tags.title
             navigator.mediaSession.metadata.title = tag.tags.title
          } else {
-            nome_musica.innerHTML = diretorio[indice].split(".").slice(0, -1).join(".")
+            nome_musica.innerHTML = diretorio_tocando[indice].split(".").slice(0, -1).join(".")
             navigator.mediaSession.metadata.title = nome_musica.innerHTML
          }
 
@@ -202,7 +206,7 @@ async function atualizar_tela_musica(indice = indice_loaded) { // pegar direto d
          cover_album.src = 'icons/padrao.png'
          navigator.mediaSession.metadata.artwork = [{ src: 'icons/padrao.png' }]
          console.log("aqui")
-         nome_musica.innerHTML = diretorio[indice].split(".").slice(0, -1).join(".")
+         nome_musica.innerHTML = diretorio_tocando[indice].split(".").slice(0, -1).join(".")
 
          navigator.mediaSession.metadata.title = nome_musica.innerHTML
 
@@ -242,7 +246,7 @@ function listar_playlists(retomar = false) {
             lista_playlists.appendChild(item)
          }
          if (!retomar) {
-            setPathPassada(pasta_playlists, pasta_selecionada, cache_dir)
+            setPathPassada(path_tocando, pasta_tocando, cache_dir)
          } else {
             selecionar_playlist(undefined, true)
          }
@@ -256,7 +260,7 @@ function selecionar_playlist(botao, retomar = false) {
 
    if (retomar) {
       botao = Array.from(document.getElementsByClassName("playlist")).find(playlist => {
-         return playlist.innerHTML == pasta_selecionada
+         return playlist.innerHTML == pasta_tocando
       })
       diferente = true
    } else {
@@ -306,7 +310,10 @@ function selecionar_playlist(botao, retomar = false) {
       if (retomar) {
          const funçaoT = async () => {
             botao.setAttribute("class", "playlist texto_active")
+            
+            diretorio_tocando = diretorio
             carregar_musica()
+
             audio.currentTime = getPos()
             let v = audio.volume
             audio.volume = 0
@@ -321,6 +328,7 @@ function selecionar_playlist(botao, retomar = false) {
 
       let tempoTotal = 0
       let tempo1 = performance.now()
+
       async function listar_musicas(diretorio) {            //! melhorar desempenho
          let frag = document.createDocumentFragment()
 
@@ -408,14 +416,15 @@ function selecionar_playlist(botao, retomar = false) {
             if (li != botao) { li.setAttribute('class', '') }
          })
 
-         if (retomar) {
+         if (retomar || pasta_tocando == pasta_selecionada) {
+            diretorio_tocando = diretorio
             article = document.getElementById(`${indice_loaded}`)
             if (article != null) {
                article.setAttribute("class", "musica_active")
             }
          }
 
-         setPathPassada(pasta_playlists, pasta_selecionada, cache_dir)     // salva cache
+         setPathPassada(path_tocando, pasta_tocando, cache_dir)     // salva cache
       }
 
       listar_musicas(diretorio)
@@ -426,12 +435,11 @@ function selecionar_playlist(botao, retomar = false) {
 function carregar_musica(indice = indice_loaded) {
    clearInterval(timer)
 
-   if (diretorio[indice] == undefined) {
+   if (diretorio_tocando[indice] == undefined) {
       indice = 0
       indice_loaded = 0
    }
-   audio.src = path.join(pasta_playlists, pasta_selecionada, diretorio[indice])
-   audio.addEventListener("loadedmetadata", update_slider)
+   audio.src = path.join(path_tocando, diretorio_tocando[indice])
 
    timer = setInterval(update_slider, 1000)
    atualizar_tela_musica(indice)
@@ -448,25 +456,32 @@ function tocar_especifica() {
 function tocar_especifica_clique(objeto) {
    indices_passados = []
    cursor = 0
-
+   
    if (article != undefined) {
       article.setAttribute("class", "")
    }
    article = objeto.target.closest("article")
    article.class = "musica_active"
    indice_loaded = Number(article.id)
+   
+   if (pasta_selecionada != pasta_tocando) {
+      path_tocando = path.join(pasta_playlists, pasta_selecionada)
+      pasta_tocando = pasta_selecionada
+   }
+
+   diretorio_tocando = diretorio    // transformar em objeto / pointer
 
    indices_passados.push(indice_loaded)
 
+   setPathPassada(path_tocando, pasta_tocando, cache_dir)
    carregar_musica(indice_loaded)
-
    botao_play.src = "icons/pause.svg"
 
    audio.play()
 }
 
 async function tocar() {    // botao play
-   if (diretorio.length) {
+   if (diretorio_tocando.length) {
       let botao_src = botao_play.src.split("/").slice(-1)[0]
       if (botao_src == "play.svg") {
          botao_play.src = "icons/pause.svg"
@@ -478,7 +493,7 @@ async function tocar() {    // botao play
                tocar_especifica()
 
             } else {
-               indice_loaded = Math.floor(Math.random() * diretorio.length)
+               indice_loaded = Math.floor(Math.random() * diretorio_tocando.length)
                while (indices_passados.includes(indice_loaded)) {indice_loaded = Math.floor(Math.random() * diretorio.length)}
                indices_passados.push(indice_loaded)
                tocar_especifica()
@@ -492,7 +507,7 @@ async function tocar() {    // botao play
 }
 
 function anterior() {                // botao anterior
-   if (diretorio.length) {
+   if (diretorio_tocando.length) {
       if (audio.src == "") {
          tocar()
       } else {
@@ -503,7 +518,7 @@ function anterior() {                // botao anterior
             if (indice_loaded != 0) {
                indice_loaded -= 1
             } else {
-               indice_loaded = diretorio.length - 1
+               indice_loaded = diretorio_tocando.length - 1
             }
             tocar_especifica()
 
@@ -517,11 +532,11 @@ function anterior() {                // botao anterior
                cursor -= 1
                indice_loaded = indices_passados[cursor]
             } else {
-               if (indices_passados.length == diretorio.length) {
+               if (indices_passados.length == diretorio_tocando.length) {
                   cursor = 0
                   indices_passados = []
                }      
-               indice_loaded = Math.floor(Math.random() * diretorio.length)
+               indice_loaded = Math.floor(Math.random() * diretorio_tocando.length)
                while (indices_passados.includes(indice_loaded)) {indice_loaded = Math.floor(Math.random() * diretorio.length)}
                indices_passados.unshift(indice_loaded)
             }
@@ -533,12 +548,12 @@ function anterior() {                // botao anterior
 }
 
 function proximo() {                             // botao proximo
-   if (diretorio.length) {
+   if (diretorio_tocando.length) {
       if (audio.src != "") {
          botao_play.src = "icons/pause.svg"
 
          if (aleatorio == 0) {                                 //nao-aleatorio
-            if (indice_loaded == diretorio.length - 1) {
+            if (indice_loaded == diretorio_tocando.length - 1) {
                indice_loaded = 0
             } else {
                indice_loaded += 1
@@ -554,13 +569,13 @@ function proximo() {                             // botao proximo
                cursor += 1
                indice_loaded = indices_passados[cursor]
             } else {
-               if (indices_passados.length == diretorio.length) {
+               if (indices_passados.length == diretorio_tocando.length) {
                   cursor = -1
                   indices_passados = []
                }      
                cursor += 1
-               indice_loaded = Math.floor(Math.random() * diretorio.length)
-               while (indices_passados.includes(indice_loaded)){indice_loaded = Math.floor(Math.random() * diretorio.length)}
+               indice_loaded = Math.floor(Math.random() * diretorio_tocando.length)
+               while (indices_passados.includes(indice_loaded)){indice_loaded = Math.floor(Math.random() * diretorio_tocando.length)}
                indices_passados.push(indice_loaded)
             }
             console.log(indice_loaded)
