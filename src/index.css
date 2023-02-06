@@ -94,6 +94,7 @@ img {
 }
 
 .texto_active {
+  font-size: 110%;
   color: white;
 }
 
@@ -340,6 +341,18 @@ button {
   right: 90%;
   top: calc(100% - 224px);
   transition: all 0.5s;
+}
+
+#div-reload {
+  position: absolute;
+  height: 35px;
+  right: 60px;
+  top	: 13px;
+}
+
+#botao-reload {
+  height: 25px;
+  width: 25px;
 }
 
 #btnCloseConfig {

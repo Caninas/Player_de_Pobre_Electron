@@ -20,6 +20,10 @@ var botao_play = document.getElementById("play")
 var fundo_random = document.getElementById("div-random") // usar parente na funçao
 var fundo_loop = document.getElementById("div-loop")
 
+var botao_reload = document.getElementById("botao-reload")
+
+botao_reload.addEventListener("click", atualizar_playlist)
+
 audio = document.getElementById("audio")
 audio.volume = 0.5
 slider_volume.value = 50
@@ -111,16 +115,15 @@ function seek(objeto) {
 }
 
 function update_slider() {
-   if (!audio.paused) {
-      const { duration, currentTime } = audio
-      slider_musica.value = `${(currentTime / duration) * 100}`
-      //slider_thumb.left = `${7.5 - ((currentTime / duration) * 15)}px`
-      //${(slider_musica.value / 10) - ((7.5 - ((currentTime / duration) * 15))*6.66666)}
-      slider_musica.style.backgroundSize = `${(currentTime / duration) * 100}% 100%` // mudar para div
+   const { duration, currentTime } = audio
+   slider_musica.value = `${(currentTime / duration) * 100}`
+   //slider_thumb.left = `${7.5 - ((currentTime / duration) * 15)}px`
+   //${(slider_musica.value / 10) - ((7.5 - ((currentTime / duration) * 15))*6.66666)}
+   slider_musica.style.backgroundSize = `${(currentTime / duration) * 100}% 100%` // mudar para div
+
+   duraçao_slider.innerHTML = `${Math.trunc(currentTime / 60)}:${("0" + Math.trunc(currentTime % 60)).slice(-2)}/${Math.trunc(duration / 60)}:${("0" + Math.trunc(duration % 60)).slice(-2)}`
+   console.log("updateslider")
    
-      duraçao_slider.innerHTML = `${Math.trunc(currentTime / 60)}:${("0" + Math.trunc(currentTime % 60)).slice(-2)}/${Math.trunc(duration / 60)}:${("0" + Math.trunc(duration % 60)).slice(-2)}`
-      console.log("updateslider")
-   }
 }
 
 function loop() {
@@ -155,6 +158,12 @@ function random(carregar) {
       }
       setState(aleatorio, _loop)
    }
+}
+
+function atualizar_playlist() {
+   cache_dir[`${pasta_selecionada}`] = []
+
+   selecionar_playlist(undefined, false, true)
 }
 
 async function atualizar_tela_musica(indice = indice_loaded) { // pegar direto da tela
@@ -255,10 +264,18 @@ function listar_playlists(retomar = false) {
    )
 }
 
-function selecionar_playlist(botao, retomar = false) {
-   let diferente = false
+var tempoCriaçãoElement1TOTAL = 0
+var tempoCriaçãoElement2TOTAL = 0
+var tempoAppendChildTOTAL = 0
+var tempoinnerHTMLTOTAL = 0
+var tempoAppendFragTOTAL = 0
+var tempoImagemTOTAL = 0
 
-   if (retomar) {
+var tempoPromisseTOTAL = 0
+
+function selecionar_playlist(botao, retomar = false, reload = false) {
+   let diferente = false
+   if (retomar || reload) {
       botao = Array.from(document.getElementsByClassName("playlist")).find(playlist => {
          return playlist.innerHTML == pasta_tocando
       })
@@ -268,9 +285,8 @@ function selecionar_playlist(botao, retomar = false) {
    }
 
    if (diferente) {
-      lista_musicas.innerHTML = ""
       document.getElementById("cabeçalho_musicas").hidden = false
-
+      
       Array.from(lista_playlists.childNodes).forEach(li => {
          if (li != botao) {
             li.setAttribute("class", "disabled")
@@ -279,61 +295,76 @@ function selecionar_playlist(botao, retomar = false) {
             }
          }
       })
-
+      
       let caminho = path.join(pasta_playlists, pasta_selecionada)
       let mudou = false
-
+      
       diretorio = fs.readdirSync(caminho, { withFileTypes: true })
-         .filter(arquivo => arquivo.isFile() && [".MP3", ".M4A", ".AAC", ".FLAC", ".OGG", ".OGA", ".DOLBY", ".WAV", ".CAF", ".OPUS", ".WEBA"].includes(path.extname(arquivo.name).toUpperCase()))
-
+      .filter(arquivo => arquivo.isFile() && [".MP3", ".M4A", ".AAC", ".FLAC", ".OGG", ".OGA", ".DOLBY", ".WAV", ".CAF", ".OPUS", ".WEBA"].includes(path.extname(arquivo.name).toUpperCase()))
+      
       try {
          mudou = diretorio.length != cache_dir[`${pasta_selecionada}`].length
       } catch (error) {
       }
-
+      
       if (pasta_selecionada in cache_dir && mudou == false) {              // botao reload
-         console.log("pega dir")
+         console.log("dir no cache")
          diretorio = cache_dir[`${pasta_selecionada}`]
       } else {
          console.log("novo diretorio")
          diretorio = diretorio.map(arquivo => arquivo.name).sort(function (a, b) {
-            if (fs.statSync(caminho + "/" + a).birthtime < fs.statSync(caminho + "/" + b).birthtime) {
+            if (fs.statSync(caminho + "/" + a).mtime < fs.statSync(caminho + "/" + b).mtime) {
                return 1
             } else {
                return -1
             }
          })           // em ordem de criação, mais novo > mais velho
-
+         
          cache_dir[`${pasta_selecionada}`] = diretorio
       }
 
-      if (retomar) {
+      
+      if (retomar || reload) {
          const funçaoT = async () => {
             botao.setAttribute("class", "playlist texto_active")
             
-            diretorio_tocando = diretorio
-            carregar_musica()
-
-            audio.currentTime = getPos()
-            let v = audio.volume
-            audio.volume = 0
-            await tocar() // conserta o bug dos listeners de botao nao respondendo (linha 50) antes de se dar play no minimo 1 vez
-            tocar()
-            audio.volume = v
+            if (!reload) {
+               diretorio_tocando = diretorio
+               
+               carregar_musica()
+               audio.currentTime = getPos()
+               let v = audio.volume
+               audio.volume = 0
+               await tocar() // conserta o bug dos listeners de botao nao respondendo (linha 50) antes de se dar play no minimo 1 vez
+               tocar()
+               audio.volume = v
+            }
          }
          funçaoT()
       } else {
          botao.firstChild.setAttribute("class", "playlist texto_active")
       }
 
-      let tempoTotal = 0
-      let tempo1 = performance.now()
-
+      if (reload) {
+         botao.setAttribute("class", "playlist texto_active")
+      }
+      
       async function listar_musicas(diretorio) {            //! melhorar desempenho
+         lista_musicas.innerHTML = ""
+         botao_reload.disabled = true
+
          let frag = document.createDocumentFragment()
 
-         for (let [i, elemento] of diretorio.entries()) {
+
+         let tempoLoop = performance.now()
+
+         for (let i = 0; i < diretorio.length; ++i){        //(let [i, elemento] of diretorio.entries()) {
             console.log(i)
+
+            let elemento = diretorio[i]
+            
+            let tempoCriaçãoElement1 = performance.now()
+
             // tirar listener daqui, colocar dbclick global e checar elemento clicado
             let linha = document.createElement("article")
             linha.addEventListener("dblclick", tocar_especifica_clique)
@@ -349,69 +380,114 @@ function selecionar_playlist(botao, retomar = false) {
             ext.setAttribute("class", "extensao texto_padrao")
             ext.innerHTML = `.${elemento.split(".").pop().toUpperCase()}`
 
+            tempoCriaçãoElement1TOTAL += (performance.now() - tempoCriaçãoElement1)
+
+            let tempoPromise = performance.now()
             await new Promise((resolve) => {
+
                jsmediatags.read(path.join(caminho, elemento), {
                   onSuccess: tag => {
+
+                     console.log(tempoCriaçãoElement2TOTAL)
+                     tempoCriaçãoElement2 = performance.now()
+                     
+                     var tags = tag.tags;
                      let album = document.createElement("p")
                      album.setAttribute("class", "album texto_padrao")
-
+                     
                      let artista = document.createElement("p")
                      artista.setAttribute("class", "artista texto_padrao")
 
+                     tempoCriaçãoElement22 = performance.now()
+
+                     tempoCriaçãoElement2TOTAL = tempoCriaçãoElement2TOTAL + (tempoCriaçãoElement22 - tempoCriaçãoElement2)
+
+                     let tempoImagem = performance.now()
+
                      try {
-                        const { data, format } = tag.tags.picture;
+                        const { data, format } = tags.picture;
                         let stringB64 = Buffer.from(data)           // conversao do array do array de dados da imagem e 
                         img.src = `data:${format};base64,${stringB64.toString('base64')}`; // converter para string
                      } catch (error) {
                         img.src = 'icons/padrao.png'
-                        //console.log("musica sem imagem:", tag.tags.title)
+                        //console.log("musica sem imagem:", tags.title)
                      }
                      
-                     nome_musica.innerHTML = tag.tags.title != undefined ? tag.tags.title : diretorio[i].split(".").slice(0, -1).join(".")
-                     artista.innerHTML = tag.tags.artist != undefined ? tag.tags.artist : ""
-                     album.innerHTML = tag.tags.album != undefined ? tag.tags.album : ""
+                     tempoImagemTOTAL += (performance.now() - tempoImagem)
+
+                     let tempoinnerHTML = performance.now()
+
+                     nome_musica.innerHTML = tags.title != undefined ? tags.title : elemento.split(".").slice(0, -1).join(".")
+                     artista.innerHTML = tags.artist != undefined ? tags.artist : ""
+                     album.innerHTML = tags.album != undefined ? tags.album : ""
+
+                     tempoinnerHTMLTOTAL += (performance.now() - tempoinnerHTML)
+
+                     let tempoAppendFrag = performance.now()
 
                      nome_musica.appendChild(artista)
                      linha.appendChild(img)
                      linha.appendChild(nome_musica)
                      linha.appendChild(album)
                      linha.appendChild(ext)
-
+                     
                      frag.appendChild(linha)
-                     tempoTotal += (performance.now() - tempo)
+
+                     tempoAppendFragTOTAL += (performance.now() - tempoAppendFrag)
+
                      resolve()
                   },
                   onError: error => {
                      img.src = 'icons/padrao.png'
                      nome_musica.innerHTML = elemento.split(".").slice(0, -1).join(".")
-
+                     
                      linha.appendChild(img)
                      linha.appendChild(nome_musica)
                      linha.appendChild(document.createElement("p"))
                      linha.appendChild(ext)
-
+                     
                      frag.appendChild(linha)
-
+                     
                      console.log("error: " + error.type, error.info)
-                     tempoTotal += (performance.now() - tempo)
                      resolve()
+                     
                   }
                })
-               let tempo = performance.now()
+
+               
                if (i % 12 == 0) {
+                  let tempoAppendChild = performance.now()
                   lista_musicas.appendChild(frag)        // bottleneck no render
                   frag = document.createDocumentFragment()
+                  let tempoAppendChild2 = performance.now()
+                  tempoAppendChildTOTAL += (tempoAppendChild2 - tempoAppendChild)
                }
-               tempoTotal += (performance.now() - tempo)
+
             })
+
+            tempoPromisseTOTAL += (performance.now() - tempoPromise)
+
          }
 
+         console.log("Tempo Loop (TOTAL):", performance.now() - tempoLoop)
+         console.log("Tempo Promise:", tempoPromisseTOTAL)
+         console.log("Tempo Criaçao element 1:", tempoCriaçãoElement1TOTAL)
+         console.log("Tempo Criaçao element 2:", tempoCriaçãoElement2TOTAL)
+         console.log("Tempo Imagem:", tempoImagemTOTAL)
+         console.log("Tempo innerHTML:", tempoinnerHTMLTOTAL)
+         console.log("Tempo Append no Frag:", tempoAppendFragTOTAL)
+         
+         let tempoAppendChild = performance.now()
+         
          lista_musicas.appendChild(frag)        // append do resto caso sobre (0 < (diretorio.length % 15) < 15)
+         
+         botao_reload.disabled = false
 
-         console.log(tempoTotal)             // tempo do if #462
+         tempoAppendChildTOTAL += (tempoAppendChild - performance.now())
+         
+         console.log("Tempo Append na DOM:", tempoAppendChildTOTAL)
 
-         console.log(performance.now() - tempo1)               // tempo total da função
-
+         
          Array.from(lista_playlists.childNodes).forEach(li => {        // habilitar botoes de volta
             if (li != botao) { li.setAttribute('class', '') }
          })
@@ -441,7 +517,7 @@ function carregar_musica(indice = indice_loaded) {
    }
    audio.src = path.join(path_tocando, diretorio_tocando[indice])
 
-   timer = setInterval(update_slider, 1000)
+   timer = setInterval(() => { if (!audio.paused) {update_slider()} }, 1000)
    atualizar_tela_musica(indice)
    setVars(indice_loaded, indices_passados, cursor)
 }
