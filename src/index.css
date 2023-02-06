@@ -320,9 +320,14 @@ section > article {
   border-width: 0px 5px 0 5px;
 }
 
-/* .btnConfig {
-
-} */
+#botao_config {
+  height: 10%;
+  /* fill svg transparente, position sticky? */
+  position: absolute;
+  right: 90%;
+  top: 50%;
+  transition: all 0.5s;
+}
 
 button {
   height: inherit;
